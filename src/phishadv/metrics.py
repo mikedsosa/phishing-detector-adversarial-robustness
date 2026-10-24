@@ -48,3 +48,14 @@ def detection_under_attack(initially_detected, success) -> float:
     if det.sum() != len(s):
         raise ValueError("success must be aligned with the detected subset")
     return float((det.sum() - s.sum()) / max(len(det), 1))
+
+
+def wilson_interval(k: int, n: int, z: float = 1.959964) -> tuple[float, float]:
+    """95% Wilson score interval for a binomial proportion k/n."""
+    if n == 0:
+        return float("nan"), float("nan")
+    p = k / n
+    den = 1 + z * z / n
+    centre = (p + z * z / (2 * n)) / den
+    half = z * np.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / den
+    return float(max(0.0, centre - half)), float(min(1.0, centre + half))

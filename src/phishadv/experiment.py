@@ -12,7 +12,7 @@ import os
 import platform
 import random
 import time
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 
 import numpy as np
@@ -20,11 +20,11 @@ import pandas as pd
 import torch
 
 from . import __version__
-from .attacks import greedy_blackbox, hotflip_whitebox, random_blackbox, shortener_wrap
-from .data import RAW_CSV, SAMPLE_CSV, load_urls, split
+from .attacks import beam_blackbox, greedy_blackbox, hotflip_whitebox, random_blackbox, shortener_wrap
+from .data import PHRESH_CSV, PHRESH_SAMPLE_CSV, RAW_CSV, SAMPLE_CSV, load_dataset, split
 from .feature_space import hopskipjump_feature_space
-from .metrics import detection_metrics, detection_under_attack, evasion_rate
-from .models import CNNDetector, GBMDetector
+from .metrics import detection_metrics, detection_under_attack, evasion_rate, wilson_interval
+from .models import CNNDetector, GBMDetector, save_detector
 
 
 @dataclass
@@ -40,14 +40,28 @@ class Config:
     at_n_per_round: int = 4000  # training phishing URLs attacked per AT round
     n_hsj: int = 200
     hsj_max_iter: int = 20
+    dataset: str = "phiusiil"
+    max_test: int | None = None
+    beam_width: int = 4  # beam search (stronger, adaptive) attack
+    beam_budget: int = 20
+    cross_dataset: str | None = None  # also score every model on this dataset's test split
+    cross_data: str | None = None
 
 
+_SMOKE = dict(max_train=None, cnn_epochs=1, n_attack=40, budget=4, at_rounds=1, at_n_per_round=60, n_hsj=8,
+              hsj_max_iter=3, beam_width=2, beam_budget=6)
 CONFIGS = {
-    "full": Config(name="full", data=str(RAW_CSV)),
-    "smoke": Config(name="smoke", data=str(SAMPLE_CSV), max_train=None, cnn_epochs=1,
-                    n_attack=40, budget=4, at_rounds=1, at_n_per_round=60, n_hsj=8,
-                    hsj_max_iter=3),
+    "full": Config(name="full", data=str(RAW_CSV), cross_dataset="phreshphish", cross_data=str(PHRESH_CSV)),
+    # PhreshPhish: training set subsampled to the size of the PhiUSIIL training set; full time-based test split.
+    "phresh": Config(name="phresh", data=str(PHRESH_CSV), dataset="phreshphish", max_train=164759,
+                     cross_dataset="phiusiil", cross_data=str(RAW_CSV)),
+    "smoke": Config(name="smoke", data=str(SAMPLE_CSV), cross_dataset="phreshphish",
+                    cross_data=str(PHRESH_SAMPLE_CSV), **_SMOKE),
+    "smoke-phresh": Config(name="smoke-phresh", data=str(PHRESH_SAMPLE_CSV), dataset="phreshphish",
+                           cross_dataset="phiusiil", cross_data=str(SAMPLE_CSV), **_SMOKE),
 }
+DEFAULT_OUT = {"full": "results", "phresh": "results/phreshphish", "smoke": "results-smoke",
+               "smoke-phresh": "results-smoke/phreshphish"}
 BUDGETS = list(range(0, 11))
 
 
@@ -103,13 +117,13 @@ def adversarial_training(kind: str, view: str, base, train: pd.DataFrame, cfg: C
     return model, stats
 
 
-def run(cfg: Config, out: Path) -> dict:
+def run(cfg: Config, out: Path, save_models: Path | None = None) -> dict:
     t0 = time.time()
     seed_everything(cfg.seed)
     torch.set_num_threads(max(1, min(8, os.cpu_count() or 1)))
     out.mkdir(parents=True, exist_ok=True)
-    df = load_urls(cfg.data)
-    sp = split(df, cfg.seed, max_train=cfg.max_train)
+    df = load_dataset(cfg.dataset, cfg.data)
+    sp = split(df, cfg.seed, max_train=cfg.max_train, max_test=cfg.max_test)
     log(f"data: {len(df)} unique URLs ({df.y.mean():.3f} phishing); "
         f"train={len(sp.train)} val={len(sp.val)} test={len(sp.test)}")
     tr_u, tr_y = sp.train.url.tolist(), sp.train.y.to_numpy()
@@ -143,6 +157,8 @@ def run(cfg: Config, out: Path) -> dict:
     # A one-line "URL format" rule, to quantify how much of the task is a dataset shortcut.
     clean_rows.append({"model": "format_rule", **detection_metrics(te_y, [float(not is_bare_https_www(u))
                                                                            for u in te_u])})
+    # A second shortcut check: "phishing iff the URL has a query string".
+    clean_rows.append({"model": "query_rule", **detection_metrics(te_y, [float(has_query(u)) for u in te_u])})
     clean = pd.DataFrame(clean_rows)
     clean.to_csv(out / "clean_metrics.csv", index=False)
     log("clean metrics:\n" + clean[["model", "accuracy", "precision", "recall", "f1", "roc_auc", "fpr"]]
@@ -168,6 +184,11 @@ def run(cfg: Config, out: Path) -> dict:
             "greedy_append_only": lambda: greedy_blackbox(m, targets, max_steps=cfg.budget, seed=cfg.seed,
                                                           tier="append_only"),
         }
+        if m.view != "domain":  # domain-only models cannot be affected by any allowed edit
+            attacks["greedy_heldout"] = lambda: greedy_blackbox(m, targets, max_steps=cfg.budget, seed=cfg.seed,
+                                                                tier="heldout")
+            attacks["beam_extended"] = lambda: beam_blackbox(m, targets, max_steps=cfg.beam_budget,
+                                                             beam=cfg.beam_width, seed=cfg.seed)
         if isinstance(m, CNNDetector) and m.view == "raw":
             attacks["hotflip_whitebox"] = lambda: hotflip_whitebox(m, targets, max_flips=cfg.budget)
             attacks["hybrid_whitebox"] = lambda: hotflip_whitebox(m, targets, max_flips=cfg.budget,
@@ -186,10 +207,12 @@ def run(cfg: Config, out: Path) -> dict:
                 q_curves.append({"model": name, "attack": aname,
                                  **{f"q<={b}": v for b, v in zip(qb, res.evasion_curve(qb, by="queries"))}})
             succ_q = res.queries[res.success] if aname == "greedy_blackbox" else np.array([])
+            lo, hi = wilson_interval(int(res.success.sum()), len(res.success))
             rob_rows.append({
                 "model": name, "attack": aname, "n_sample": len(sample),
                 "n_initially_detected": int(det.sum()),
                 "evasion_rate": evasion_rate(res.success),
+                "evasion_ci95_low": lo, "evasion_ci95_high": hi,
                 "detection_under_attack": detection_under_attack(det, res.success),
                 "median_steps_successful": (float(np.median(res.steps[res.success]))
                                             if res.success.any() else float("nan")),
@@ -202,9 +225,11 @@ def run(cfg: Config, out: Path) -> dict:
                 f"(n={len(targets)}, {dt:.0f}s)")
         # Out-of-threat-model baseline: wrap the URL in a link shortener.
         ps = m.predict_proba([s for s, d in zip(shortened, det) if d])
+        lo, hi = wilson_interval(int((ps < 0.5).sum()), len(ps))
         rob_rows.append({"model": name, "attack": "shortener_wrap", "n_sample": len(sample),
                          "n_initially_detected": int(det.sum()),
                          "evasion_rate": evasion_rate(ps < 0.5),
+                         "evasion_ci95_low": lo, "evasion_ci95_high": hi,
                          "detection_under_attack": detection_under_attack(det, ps < 0.5),
                          "median_steps_successful": 1.0 if (ps < 0.5).any() else float("nan"),
                          "median_queries_successful": float("nan"), "seconds": 0.0})
@@ -236,6 +261,34 @@ def run(cfg: Config, out: Path) -> dict:
                                     max_iter=cfg.hsj_max_iter, seed=cfg.seed)
     log(f"  {hsj}")
 
+    # ---------------- cross-dataset generalization (clean metrics only)
+    cross = []
+    if cfg.cross_dataset and cfg.cross_data and Path(cfg.cross_data).exists():
+        xdf = load_dataset(cfg.cross_dataset, cfg.cross_data)
+        xte = split(xdf, cfg.seed).test
+        xu, xy = xte.url.tolist(), xte.y.to_numpy()
+        log(f"cross-dataset evaluation on {cfg.cross_dataset} test split (n={len(xte)})")
+        for name, m in models.items():
+            cross.append({"model": name, "eval_dataset": cfg.cross_dataset,
+                          **detection_metrics(xy, m.predict_proba(xu))})
+        cross.append({"model": "format_rule", "eval_dataset": cfg.cross_dataset,
+                      **detection_metrics(xy, [float(not is_bare_https_www(u)) for u in xu])})
+        cross.append({"model": "query_rule", "eval_dataset": cfg.cross_dataset,
+                      **detection_metrics(xy, [float(has_query(u)) for u in xu])})
+        cdf = pd.DataFrame(cross)
+        cdf.to_csv(out / "cross_dataset.csv", index=False)
+        log("cross-dataset:\n" + cdf[["model", "precision", "recall", "f1", "fpr"]].to_string(index=False))
+    elif cfg.cross_dataset:
+        log(f"cross-dataset evaluation skipped: {cfg.cross_data} not found")
+
+    if save_models is not None:
+        save_models.mkdir(parents=True, exist_ok=True)
+        for name in ("gbm_raw", "cnn_raw", "gbm_raw_at", "cnn_raw_at"):
+            save_detector(models[name], save_models / name, meta={
+                "dataset": cfg.dataset, "config": cfg.name, "seed": cfg.seed,
+                "clean_test": clean.set_index("model").loc[name].to_dict()})
+        log(f"saved models -> {save_models}")
+
     # ---------------- greedy attack: which transformations were used
     op_counts = {}
     for name, res in adv_by_model.items():
@@ -247,13 +300,14 @@ def run(cfg: Config, out: Path) -> dict:
         "package_version": __version__,
         "python": platform.python_version(),
         "torch": torch.__version__,
-        "data": {"n_unique_urls": int(len(df)), "phishing_fraction": float(df.y.mean()),
+        "data": {"dataset": cfg.dataset, "n_unique_urls": int(len(df)), "phishing_fraction": float(df.y.mean()),
                  "n_train": len(sp.train), "n_val": len(sp.val), "n_test": len(sp.test),
                  "structure": structure},
         "clean": clean.set_index("model").to_dict(orient="index"),
         "robustness": rob_rows,
         "adversarial_training": at_stats,
         "transfer": transfer,
+        "cross_dataset": cross,
         "hopskipjump_feature_space_gbm_raw": hsj,
         "greedy_transformation_usage": op_counts,
         "runtime_seconds": round(time.time() - t0, 1),
@@ -273,6 +327,12 @@ def is_bare_https_www(url: str) -> bool:
     p = parse(url)
     return (p.scheme == "https" and p.sub_labels[:1] == ["www"] and p.path in ("", "/")
             and not p.query)
+
+
+def has_query(url: str) -> bool:
+    from .urls import parse
+
+    return bool(parse(url).query)
 
 
 def dataset_structure(df: pd.DataFrame) -> dict:
@@ -321,10 +381,16 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--config", choices=sorted(CONFIGS), default="full")
     ap.add_argument("--out", default=None)
+    ap.add_argument("--seed", type=int, default=None, help="override the config seed (default 42)")
+    ap.add_argument("--save-models", default=None, help="directory for the trained baseline and AT models")
     args = ap.parse_args()
     cfg = CONFIGS[args.config]
-    out = Path(args.out or ("results" if cfg.name == "full" else f"results-{cfg.name}"))
-    run(cfg, out)
+    if args.seed is not None and args.seed != cfg.seed:
+        cfg = replace(cfg, seed=args.seed)
+        default = f"results/seeds/{cfg.name}-seed{cfg.seed}"
+    else:
+        default = DEFAULT_OUT[cfg.name]
+    run(cfg, Path(args.out or default), Path(args.save_models) if args.save_models else None)
 
 
 if __name__ == "__main__":

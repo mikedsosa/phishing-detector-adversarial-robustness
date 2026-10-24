@@ -36,8 +36,9 @@ model and inferring membership are all out of scope.
 | Setting | What the attacker knows | Attacks |
 |---|---|---|
 | Black-box, score-based | Can submit URLs and read back P(phishing), for example through a "check this link" API or by probing a gateway. Knows nothing about the model's internals. | `greedy_blackbox`, `random_blackbox` |
+| Black-box, stronger search | Same access, but a beam search (width 4, up to 20 edits) over every transformation, including the held-out family below | `beam_extended` |
 | White-box | Full access to the character CNN's weights and gradients, which is the worst case (an insider or a leaked model) | `hotflip_whitebox`, `hybrid_whitebox` |
-| Adaptive | Knows which defense is deployed (canonicalization, adversarial training) and attacks the full defended pipeline | Every attack is re-run against every defended model. No result is computed with attacks crafted against a different model, except the separately reported transfer experiment. |
+| Adaptive | Knows which defense is deployed (canonicalization, adversarial training) and attacks the full defended pipeline | Every attack is re-run against every defended model. Against adversarially trained models, `greedy_heldout` uses only edits the defense never saw, and `beam_extended` searches harder with a bigger budget, so both are adaptive attacks rather than replays of the training attack. No result is computed with attacks crafted against a different model, except the separately reported transfer experiment. |
 
 ## Attacker capabilities (the problem-space constraint)
 
@@ -69,6 +70,24 @@ host labels, path and query may *identify the content*, and the attacker
 doesn't control TLS or DNS. The only allowed changes are additions that can't
 change what the server returns: **append an unused query parameter** and
 **append a fragment**.
+
+### Held-out transformations (`heldout` and `extended` tiers)
+
+Adversarial training only ever sees the Tier 1 transformations. To test
+whether it generalizes, a second family of edits, also within the attacker's
+control as a server/DNS owner, is kept out of training entirely:
+
+| Transformation | Example of what changes |
+|---|---|
+| `deep_link_path` | Serve the page under an article- or product-style path such as `/blog/pricing-tips-guide` or `/2024/05/travel-events` |
+| `add_file_extension` | Add `.html`, `.htm`, `.php` or `.aspx` to the last path segment (or serve `/index.html`) |
+| `tracking_param` | Append an ad-click or campaign parameter (`gclid`, `fbclid`, `msclkid`, `utm_campaign`, `mc_cid`) with a random token |
+| `toggle_trailing_slash` | Add or remove the trailing `/` on a non-root path |
+| `neutral_sub_label` | Prepend, or swap the leftmost non-anchor label for, a neutral label (`static`, `assets`, `media`, `go`, ...) |
+| `percent_encode_path_char` | Percent-encode one letter in the path (an equivalent URL under RFC 3986) |
+
+The `heldout` tier allows only these; `extended` allows Tier 1 plus these.
+All candidates pass the same validity checks below.
 
 ### Validity checks applied to every candidate
 
@@ -125,7 +144,7 @@ for the black-box attack, in model queries.
 |---|---|---|
 | Canonicalization (input normalization) | Before the model sees the URL, decode IDNA, map confusables to an ASCII skeleton, force the scheme to `http`, strip a leading `www` and trailing slashes, and drop the fragment. These are things an attacker gets for free, so the model shouldn't rely on them. | `phishadv.urls.canonicalize`, view `canon` |
 | Feature hardening: domain-only | The model sees only `http://<registrable domain>`, the part the attacker can't change in this threat model | view `domain` |
-| Adversarial training | Two rounds of: attack the current model on 4,000 fresh *training* phishing URLs, add every URL on the attack trajectories (labelled phishing) to the training set, and retrain from scratch. For the CNN, hybrid white-box examples are added too. | `experiment.adversarial_training` |
+| Adversarial training | Two rounds of: attack the current model (Tier 1 transformations only) on 4,000 fresh *training* phishing URLs, add every URL on the attack trajectories (labelled phishing) to the training set, and retrain from scratch. For the CNN, hybrid white-box examples are added too. | `experiment.adversarial_training` |
 | Canonicalization + adversarial training | Both of the above, for the GBM | model `gbm_canon_at` |
 
 ## Assets and impact

@@ -1,0 +1,3 @@
+# Optional: local Streamlit demo (make app). Not needed for experiments or CI.
+-r requirements.txt
+streamlit==1.66.1

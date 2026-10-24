@@ -12,25 +12,42 @@ from __future__ import annotations
 import numpy as np
 from art.attacks.evasion import HopSkipJump
 from art.estimators.classification import BlackBoxClassifier
+from threadpoolctl import threadpool_limits
 
 from .features import BINARY_FEATURES, INTEGER_FEATURES, LOCKED_FEATURES
 from .models import GBMDetector
 
 
+class _CallBudgetExceeded(Exception):
+    pass
+
+
 def hopskipjump_feature_space(model: GBMDetector, urls: list[str], x_train: np.ndarray,
                               x_benign: np.ndarray, max_iter: int = 20, max_eval: int = 1000,
-                              init_eval: int = 100, seed: int = 0) -> dict:
+                              init_eval: int = 100, seed: int = 0, max_calls: int = 50_000) -> dict:
     """``x_benign``: feature vectors of legitimate URLs; HopSkipJump starts from
-    the nearest one (L2, min-max scaled) to each phishing vector."""
+    the nearest one (L2, min-max scaled) to each phishing vector.
+
+    ART's step-size search can loop forever when a sample sits within float32
+    rounding of the decision boundary (epsilon underflows to 0). Each sample is
+    therefore attacked separately with a cap of ``max_calls`` model calls; a
+    sample that hits the cap counts as a failed attack and is reported in
+    ``n_aborted``. Attacking samples one at a time gives the same result as one
+    batched ``generate`` call (no randomness is used outside the per-sample loop
+    when ``x_adv_init`` is given)."""
     names = model.featurizer.feature_names
     x = model.features(urls).astype(np.float32)
     lo = x_train.min(axis=0).astype(np.float32)
     hi = x_train.max(axis=0).astype(np.float32)
     hi = np.where(hi > lo, hi, lo + 1.0)
 
+    calls = [0]
+
     def predict(z):
-        p = model.clf.predict_proba(np.asarray(z, dtype=np.float32))
-        return p
+        calls[0] += 1
+        if calls[0] > max_calls:
+            raise _CallBudgetExceeded
+        return model.clf.predict_proba(np.asarray(z, dtype=np.float32))
 
     clf = BlackBoxClassifier(predict, input_shape=(x.shape[1],), nb_classes=2,
                              clip_values=(lo, hi))
@@ -41,7 +58,17 @@ def hopskipjump_feature_space(model: GBMDetector, urls: list[str], x_train: np.n
     d = (((x[:, None, :] - xb[None, :, :]) / scale0) ** 2).sum(-1)
     x_init = xb[d.argmin(1)]
     np.random.seed(seed)
-    x_adv = attack.generate(x=x, x_adv_init=x_init)
+    # HopSkipJump makes many tiny predict calls; OpenMP thread start-up dominates
+    # them, so run single-threaded (predictions are identical either way).
+    x_adv = x.copy()
+    aborted = np.zeros(len(x), dtype=bool)
+    with threadpool_limits(1):
+        for i in range(len(x)):
+            calls[0] = 0
+            try:
+                x_adv[i] = attack.generate(x=x[i : i + 1], x_adv_init=x_init[i : i + 1])[0]
+            except _CallBudgetExceeded:
+                aborted[i] = True  # counted as a failure: x_adv[i] stays the original vector
     p_adv = model.clf.predict_proba(x_adv)[:, 1]
     success = p_adv < 0.5
     changed = ~np.isclose(x_adv, x, atol=1e-6)
@@ -63,6 +90,7 @@ def hopskipjump_feature_space(model: GBMDetector, urls: list[str], x_train: np.n
 
     return {
         "n_attacked": int(len(urls)),
+        "n_aborted": int(aborted.sum()),
         "evasion_rate": float(s.mean()),
         "median_features_changed_successful": float(np.median(changed[s].sum(1))) if s.any() else nan,
         "median_normalized_l2_successful": float(np.median(l2[s])) if s.any() else nan,

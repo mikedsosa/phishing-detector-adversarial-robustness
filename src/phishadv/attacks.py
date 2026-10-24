@@ -195,6 +195,87 @@ TRANSFORMS: dict[str, Transform] = {
     "append_fragment": _append_fragment,
 }
 
+# --------------------------------------------------------------------------
+# Held-out transformation family. None of these is used by adversarial
+# training, so attacks built from them test whether a defense generalizes
+# beyond the edits it was trained on. They stay inside the "owner" capability
+# tier: every edit is to the scheme-free part of the URL the attacker serves.
+# --------------------------------------------------------------------------
+
+DEEP_LINK_WORDS = ("guide", "tips", "review", "pricing", "recipes", "events", "careers", "community",
+                   "resources", "learn", "services", "products", "contact", "travel", "garden", "music")
+NEUTRAL_SUB_LABELS = ("static", "assets", "media", "img", "files", "go", "info", "portal")
+TRACKING_PARAMS = ("gclid", "fbclid", "msclkid", "utm_campaign", "mc_cid")
+FILE_EXTENSIONS = (".html", ".htm", ".php", ".aspx")
+
+
+def _deep_link_path(u, rng):
+    """Re-host the page under a realistic article/product-style deep link."""
+    p = parse(u)
+    w = lambda: rng.choice(DEEP_LINK_WORDS)  # noqa: E731
+    paths = (f"/blog/{w()}-{w()}-{w()}", f"/{rng.randint(2019, 2025)}/{rng.randint(1, 12):02d}/{w()}-{w()}",
+             f"/{w()}/{w()}-{w()}")
+    return [compose(p.with_(path=pa)) for pa in paths]
+
+
+def _add_file_extension(u, rng):
+    p = parse(u)
+    segs = p.path_segments
+    if not segs:
+        return [compose(p.with_(path="/index" + rng.choice(FILE_EXTENSIONS)))]
+    if "." in segs[-1]:
+        return []
+    return [compose(p.with_(path="/" + "/".join(segs[:-1] + [segs[-1] + rng.choice(FILE_EXTENSIONS)])))]
+
+
+def _tracking_param(u, rng):
+    """Add an ad-click/campaign tracking parameter with a random token (ignored by the server)."""
+    p = parse(u)
+    if p.query.count("&") >= 5:
+        return []
+    alpha = string.ascii_letters + string.digits
+    kv = f"{rng.choice(TRACKING_PARAMS)}={''.join(rng.choices(alpha, k=rng.randint(8, 22)))}"
+    return [compose(p.with_(query=f"{p.query}&{kv}" if p.query else kv))]
+
+
+def _toggle_trailing_slash(u, rng):
+    p = parse(u)
+    if not p.path or p.path == "/":
+        return []
+    return [compose(p.with_(path=p.path[:-1] if p.path.endswith("/") else p.path + "/"))]
+
+
+def _neutral_sub_label(u, rng):
+    p = parse(u)
+    labs = p.sub_labels
+    out = []
+    if len(labs) < 3:
+        out.append(compose(p.with_(subdomain=".".join([rng.choice(NEUTRAL_SUB_LABELS)] + labs))))
+    if labs and labs[0] not in NEUTRAL_SUB_LABELS and (len(labs) > 1 or p.anchor_label is None):
+        out.append(compose(p.with_(subdomain=".".join([rng.choice(NEUTRAL_SUB_LABELS)] + labs[1:]))))
+    return out
+
+
+def _percent_encode_path_char(u, rng):
+    """Percent-encode one letter of the path (RFC 3986 says the URLs are equivalent)."""
+    p = parse(u)
+    pos = [j for j, ch in enumerate(p.path) if ch.isalpha()]
+    if not pos:
+        return []
+    j = rng.choice(pos)
+    return [compose(p.with_(path=p.path[:j] + f"%{ord(p.path[j]):02X}" + p.path[j + 1 :]))]
+
+
+HELDOUT_TRANSFORMS: dict[str, Transform] = {
+    "deep_link_path": _deep_link_path,
+    "add_file_extension": _add_file_extension,
+    "tracking_param": _tracking_param,
+    "toggle_trailing_slash": _toggle_trailing_slash,
+    "neutral_sub_label": _neutral_sub_label,
+    "percent_encode_path_char": _percent_encode_path_char,
+}
+ALL_TRANSFORMS: dict[str, Transform] = {**TRANSFORMS, **HELDOUT_TRANSFORMS}
+
 # Capability tiers (see docs/threat-model.md).
 #  * "owner": the attacker operates the server and DNS of the phishing site
 #    (attacker-registered domain or their own tenant on a hosting platform).
@@ -202,21 +283,31 @@ TRANSFORMS: dict[str, Transform] = {
 #    infrastructure, where existing host labels and paths may identify the
 #    content and TLS/DNS are not under the attacker's control. Only additions
 #    that cannot change what the server returns are allowed.
+#  * "heldout": the same capabilities, but only the held-out transformations
+#    above (never seen during adversarial training).
+#  * "extended": "owner" plus "heldout".
 TIERS: dict[str, tuple[str, ...]] = {
     "owner": tuple(TRANSFORMS),
     "append_only": ("append_query_param", "append_fragment"),
+    "heldout": tuple(HELDOUT_TRANSFORMS),
+    "extended": tuple(ALL_TRANSFORMS),
 }
+
+
+def labeled_neighbors(url: str, original: str, rng: random.Random, tier: str = "owner") -> list[tuple[str, str]]:
+    """Valid one-transformation neighbors of ``url`` with the transformation that produced each."""
+    seen, out = {url}, []
+    for name in TIERS[tier]:
+        for c in ALL_TRANSFORMS[name](url, rng):
+            if c not in seen and is_valid_url(c, original):
+                seen.add(c)
+                out.append((c, name))
+    return out
 
 
 def neighbors(url: str, original: str, rng: random.Random, tier: str = "owner") -> list[str]:
     """All valid one-transformation neighbors of ``url`` (deduplicated, original-checked)."""
-    seen, out = {url}, []
-    for name in TIERS[tier]:
-        for c in TRANSFORMS[name](url, rng):
-            if c not in seen and is_valid_url(c, original):
-                seen.add(c)
-                out.append(c)
-    return out
+    return [c for c, _ in labeled_neighbors(url, original, rng, tier)]
 
 
 @dataclass
@@ -285,6 +376,105 @@ def greedy_blackbox(model, urls: list[str], max_steps: int = 10, threshold: floa
                 steps_at[i], q_at[i] = step, queries[i]
                 active[i] = False
     return AttackResult(list(urls), cur, score < threshold, steps_at, q_at, score, traces)
+
+
+def beam_blackbox(model, urls: list[str], max_steps: int = 20, beam: int = 4, threshold: float = 0.5,
+                  seed: int = 0, tier: str = "extended") -> AttackResult:
+    """Score-based black-box beam search over problem-space transformations.
+
+    A stronger optimizer than :func:`greedy_blackbox`: it keeps the ``beam``
+    lowest-scoring URLs at every step instead of one, does not stop at a local
+    optimum, and by default can use the held-out transformations as well.
+    Run directly against a defended model, it is an adaptive attack on that
+    defense (the attacker queries the deployed, defended pipeline).
+    """
+    rng = random.Random(seed)
+    n = len(urls)
+    score0 = model.predict_proba(list(urls))
+    queries = np.ones(n)
+    steps_at = np.where(score0 < threshold, 0.0, np.inf)
+    q_at = np.where(score0 < threshold, 1.0, np.inf)
+    best_url, best_score = list(urls), score0.copy()
+    beams = [[(urls[i], float(score0[i]))] if score0[i] >= threshold else [] for i in range(n)]
+    traces = [[u] for u in urls]
+    paths = {i: {urls[i]: [urls[i]]} for i in range(n)}
+    for step in range(1, max_steps + 1):
+        cands, owner = [], []
+        for i in range(n):
+            if not beams[i]:
+                continue
+            seen = set(paths[i])
+            for u, _ in beams[i]:
+                for c in neighbors(u, urls[i], rng, tier):
+                    if c not in seen:
+                        seen.add(c)
+                        paths[i][c] = paths[i][u] + [c]
+                        cands.append(c)
+                        owner.append(i)
+        if not cands:
+            break
+        s = model.predict_proba(cands)
+        owner = np.asarray(owner)
+        for i in np.unique(owner):
+            m = np.flatnonzero(owner == i)
+            queries[i] += len(m)
+            order = m[np.argsort(s[m])]
+            top = order[0]
+            if s[top] < best_score[i]:
+                best_url[i], best_score[i] = cands[top], float(s[top])
+            if s[top] < threshold:
+                steps_at[i], q_at[i] = step, queries[i]
+                traces[i] = paths[i][cands[top]]
+                beams[i] = []
+                continue
+            beams[i] = [(cands[j], float(s[j])) for j in order[:beam]]
+            # Keep only the paths still reachable from the beam (memory bound).
+            keep = {u for b, _ in beams[i] for u in paths[i][b]}
+            paths[i] = {u: paths[i][u] for u in keep}
+    for i in range(n):
+        if not np.isfinite(steps_at[i]) and best_url[i] in paths[i]:
+            traces[i] = paths[i][best_url[i]]
+    return AttackResult(list(urls), best_url, best_score < threshold, steps_at, q_at, best_score, traces)
+
+
+def minimal_flip(model, url: str, max_depth: int = 3, width: int = 64, threshold: float = 0.5,
+                 tier: str = "extended", seed: int = 0) -> dict:
+    """Fewest-transformation edit of one URL that flips the verdict to 'legitimate'.
+
+    Breadth-first search, level by level: every valid neighbor of the current
+    frontier is scored, and the search stops at the first depth where any
+    candidate scores below ``threshold`` (so the edit is minimal in number of
+    transformations, up to the ``width`` pruning of the frontier). Single URL
+    only, for explanation in the demo.
+    """
+    rng = random.Random(seed)
+    p0 = float(model.predict_proba([url])[0])
+    result = {"url": url, "p_phish": p0, "flagged": p0 >= threshold, "found": False, "steps": [],
+              "adversarial": None, "p_after": None, "queries": 1}
+    if p0 < threshold:
+        return result
+    frontier = [(url, [])]
+    seen = {url}
+    for _depth in range(1, max_depth + 1):
+        cands, hist = [], []
+        for u, h in frontier:
+            for c, name in labeled_neighbors(u, url, rng, tier):
+                if c not in seen:
+                    seen.add(c)
+                    cands.append(c)
+                    hist.append(h + [(name, c)])
+        if not cands:
+            break
+        s = model.predict_proba(cands)
+        result["queries"] += len(cands)
+        order = np.argsort(s)
+        b = int(order[0])
+        if s[b] < threshold:
+            result.update(found=True, adversarial=cands[b], p_after=float(s[b]),
+                          steps=[{"transformation": n, "url": c} for n, c in hist[b]])
+            return result
+        frontier = [(cands[j], hist[j]) for j in order[:width]]
+    return result
 
 
 def random_blackbox(model, urls: list[str], max_steps: int = 10, threshold: float = 0.5,

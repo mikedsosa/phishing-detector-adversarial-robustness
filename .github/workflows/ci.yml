@@ -24,10 +24,10 @@ jobs:
           python -m pip install torch==2.14.1 --index-url https://download.pytorch.org/whl/cpu
           python -m pip install -r requirements-dev.txt
       - name: Lint (ruff)
-        run: ruff check src tests scripts
+        run: ruff check src tests scripts app
       - name: Unit tests (pytest)
         run: python -m pytest -q
-      - name: End-to-end smoke run on the bundled 1,500-URL sample
+      - name: End-to-end smoke runs on the bundled 1,500-URL samples (both datasets)
         run: make smoke
 
   secret-scan:

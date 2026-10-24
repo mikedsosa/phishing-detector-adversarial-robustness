@@ -9,6 +9,10 @@ on the raw URL and pass through the view, as a real attacker's URL would.
 
 from __future__ import annotations
 
+import json
+import pickle
+from pathlib import Path
+
 import numpy as np
 import torch
 from sklearn.ensemble import HistGradientBoostingClassifier
@@ -38,6 +42,15 @@ class Detector:
     def __init__(self, view: str = "raw"):
         self.view = view
         self._view_fn = VIEWS[view]
+
+    def __getstate__(self):
+        state = dict(self.__dict__)
+        state.pop("_view_fn", None)  # lambdas are not picklable; restored from the view name
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self._view_fn = VIEWS[self.view]
 
     def views(self, urls: list[str]) -> list[str]:
         return [self._view_fn(u) for u in urls]
@@ -138,3 +151,35 @@ class CNNDetector(Detector):
         v = self.views(urls)
         out = [torch.sigmoid(self.net(encode_chars(v[i : i + batch]))) for i in range(0, len(v), batch)]
         return torch.cat(out).numpy().astype(np.float64)
+
+
+# --------------------------------------------------------------------------
+# Persistence (for the demo CLI). Only load model files you produced yourself:
+# the GBM is stored with pickle, which can execute code when loaded.
+# --------------------------------------------------------------------------
+
+
+def save_detector(model: Detector, path: Path | str, meta: dict | None = None) -> None:
+    path = Path(path)
+    path.mkdir(parents=True, exist_ok=True)
+    info = {"kind": model.name, "view": model.view, **(meta or {})}
+    if isinstance(model, CNNDetector):
+        torch.save(model.net.state_dict(), path / "cnn.pt")
+        info.update(epochs=model.epochs, seed=info.get("seed", model.seed))
+    else:
+        with (path / "gbm.pkl").open("wb") as f:
+            pickle.dump(model, f)
+    (path / "meta.json").write_text(json.dumps(info, indent=2, default=float))
+
+
+def load_detector(path: Path | str) -> tuple[Detector, dict]:
+    path = Path(path)
+    info = json.loads((path / "meta.json").read_text())
+    if info["kind"] == "cnn":
+        model = CNNDetector(view=info["view"])
+        model.net.load_state_dict(torch.load(path / "cnn.pt", weights_only=True))
+        model.net.eval()
+    else:
+        with (path / "gbm.pkl").open("rb") as f:
+            model = pickle.load(f)  # noqa: S301 - trusted, locally produced file
+    return model, info

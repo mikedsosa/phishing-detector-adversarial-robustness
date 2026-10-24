@@ -1,0 +1,11 @@
+.git
+.venv
+data/raw
+models
+logs
+results-smoke
+results/seeds
+**/__pycache__
+.pytest_cache
+.ruff_cache
+.env

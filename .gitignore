@@ -13,3 +13,8 @@ results-smoke/
 # Per-URL attack outputs contain (possibly still live) phishing URLs; regenerate with `make reproduce`.
 results/attack_sample_urls.csv
 results/adversarial_examples_greedy.csv
+results/**/attack_sample_urls.csv
+results/**/adversarial_examples_greedy.csv
+# Trained demo models and run logs (regenerate with `make models` / `make reproduce`).
+models/
+logs/
