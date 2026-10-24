@@ -14,6 +14,8 @@ RUN pip install torch==2.14.1 --index-url https://download.pytorch.org/whl/cpu \
     && pip install -r requirements-dev.txt
 
 COPY --chown=app:app . .
+# WORKDIR is created root-owned; the smoke run writes results-smoke/ here.
+RUN chown app:app /home/app/phishadv
 USER app
 
 CMD ["sh", "-c", "make test && make smoke PY=python && python -m phishadv train --dataset sample --out /tmp/models && python -m phishadv score 'http://secure-login.example-account.xyz/verify.php?id=1' --models-dir /tmp/models"]

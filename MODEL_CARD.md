@@ -57,8 +57,13 @@ Brackets are 95% Wilson intervals.
 | `cnn_raw_at` | 0.176 [0.153, 0.201] | 0.551 [0.519, 0.582] | 0.976 [0.964, 0.984] |
 
 Adversarial training helps against the attack it was trained on and much less
-against edits it never saw or a stronger search. A second seed (43) gives
-the same picture; see [`results/SEEDS.md`](results/SEEDS.md).
+against edits it never saw or a stronger search. Seeds 43 and 44 give
+the same picture. Averaged over seeds 42–44 (pooled 95% Wilson intervals),
+greedy evasion is 0.849 [0.835, 0.862] for `gbm_raw`, 0.951 [0.942, 0.958]
+for `cnn_raw`, 0.367 [0.350, 0.386] for `gbm_raw_at` and 0.229
+[0.214, 0.244] for `cnn_raw_at` (per-seed 0.176–0.269); see
+[`results/SEEDS.md`](results/SEEDS.md). The published models are the seed-42
+ones.
 
 ## Known limitations
 

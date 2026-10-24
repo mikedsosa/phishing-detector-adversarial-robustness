@@ -24,10 +24,8 @@ datasets: PhiUSIIL and the newer, time-split PhreshPhish.
 Headline numbers are from the seed-42 run on **PhreshPhish** (CC BY 4.0;
 real benign browsing URLs, test set collected after the training set). The
 attacks use 1,000 phishing test URLs. Brackets are 95% Wilson intervals.
-A second PhreshPhish seed (43) is in [`results/SEEDS.md`](results/SEEDS.md):
-the baseline rates move by at most 2.9 points, the adversarially trained CNN's
-by up to 9.4. The remaining seed runs (PhiUSIIL 43/44, PhreshPhish 44) had
-not finished when these results were committed; `make seeds` runs them.
+Both datasets were also run with seeds 43 and 44; the three-seed summary is
+below the table and in full in [`results/SEEDS.md`](results/SEEDS.md).
 
 | | GBM (scikit-learn) | Char-CNN (PyTorch) |
 |---|---|---|
@@ -39,13 +37,31 @@ not finished when these results were committed; `make seeds` runs them.
 | After adversarial training: held-out | 35.2% [32.2, 38.4] | 55.1% [51.9, 58.2] |
 | After adversarial training: beam | 70.0% [66.9, 72.8] | 97.6% [96.4, 98.4] |
 
+Across PhreshPhish seeds 42, 43 and 44: mean evasion, with a 95% Wilson
+interval on the evasions pooled over the three seeds (about 2,700–2,800
+detected URLs per cell) and the per-seed range.
+
+| | GBM (scikit-learn) | Char-CNN (PyTorch) |
+|---|---|---|
+| Greedy black-box, ≤10 edits | 84.9% [83.5, 86.2], range 83.2–86.1 | 95.1% [94.2, 95.8], range 94.2–95.6 |
+| Held-out edits, ≤10 | 49.3% [47.4, 51.2], range 48.2–49.8 | 73.2% [71.5, 74.8], range 69.3–75.5 |
+| Beam search, ≤20 | 96.1% [95.3, 96.7], range 95.4–96.9 | ≈100% [99.8, 100.0], range 99.9–100 |
+| After adversarial training: greedy | 36.7% [35.0, 38.6], range 34.7–40.0 | 22.9% [21.4, 24.4], range 17.6–26.9 |
+| After adversarial training: held-out | 39.5% [37.7, 41.4], range 35.2–41.8 | 62.1% [60.3, 63.8], range 55.1–66.8 |
+| After adversarial training: beam | 72.5% [70.8, 74.1], range 70.0–75.0 | 98.7% [98.2, 99.1], range 97.6–99.4 |
+
+The pooled interval reflects sampling error only. The seed-to-seed spread is
+wider for the adversarially trained models, and on PhiUSIIL the baseline CNN's
+greedy evasion ranges from 50.6% to 63.0% (GBM: 61.7–64.5%).
+
 *Evasion rate* is the share of phishing URLs that a model initially flags
 (p ≥ 0.5) and that end below 0.5 after the attack. The scheme, `www`,
 subdomain labels, path and query can change, but the registrable domain
 cannot.
 
 1. **Fairer data made the detectors easier to evade, not harder.** On
-   PhiUSIIL about 62% of detected phishing URLs evaded both models. On
+   PhiUSIIL about 62% of detected phishing URLs evaded both models (seed 42;
+   51–65% across seeds 42–44). On
    PhreshPhish it is 83% (GBM) and 96% (CNN), usually within two edits.
 2. **Adversarial training mostly teaches the model the attacker it saw.** It
    cuts greedy evasion to 35% and 18%. Against edit types left out of training
@@ -116,7 +132,7 @@ flowchart LR
 ```bash
 python3.12 -m venv .venv && source .venv/bin/activate
 make install      # pinned requirements (CPU PyTorch)
-make reproduce    # downloads both datasets, verifies checksums, runs seeds 42-44 on both, aggregates (about 3 h on 8 CPU cores; each of the six runs takes about 28 min)
+make reproduce    # downloads both datasets, verifies checksums, runs seeds 42-44 on both, aggregates (about 3 h on 8 CPU cores; each of the six runs takes 28–31 min)
 ```
 
 `make reproduce` runs `reproduce-main` (seed 42 on both datasets, which also
@@ -175,7 +191,8 @@ hasn't been completed yet, so treat the Dockerfile as lightly tested.
 * The main `owner` threat tier assumes the attacker runs the server and DNS.
   Under the conservative `append_only` tier (compromised sites), evasion is
   at most 1.2%.
-* Two seeds on PhreshPhish, one on PhiUSIIL so far. The transformations are hand-written; LLM-written
+* Three seeds (42–44) per dataset: enough to show run-to-run spread, not a
+  variance study. The transformations are hand-written; LLM-written
   rewrites are left as future work.
 
 See [`docs/paper.md` §5](docs/paper.md#5-limitations-and-honest-negatives) and

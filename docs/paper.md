@@ -34,8 +34,11 @@ PhiUSIIL-trained full-URL models flag 93–100% of PhreshPhish's. Domain-only
 models can't be evaded within the threat model but reach only 0.75–0.85 F1.
 An unconstrained feature-space attack (ART HopSkipJump) "succeeds" 99.5–100%
 of the time, but at most 6% of its outputs correspond to a realizable URL.
-A second PhreshPhish seed moves the baseline rates by at most 2.9 points and
-the adversarially trained models' rates by up to 9.4.
+Over three seeds per dataset (42–44), the PhreshPhish baselines' greedy
+evasion averages 84.9% (GBM, pooled 95% CI [83.5, 86.2]) and 95.1% (CNN,
+[94.2, 95.8]); the adversarially trained models vary more from seed to seed
+(CNN held-out evasion 55.1–66.8%), as does the PhiUSIIL baseline CNN (greedy
+50.6–63.0%).
 
 ## 1. Background and related work
 
@@ -245,14 +248,16 @@ Each detector can read one of three *views* of the URL:
   (random split or training sample, model training, adversarial training,
   attack sample) with seeds 43 and 44 on both datasets, and
   `results/SEEDS.md` reports mean and min–max across seeds and a Wilson
-  interval on the pooled counts. In the committed results only PhreshPhish
-  seed 43 had finished (§4.6).
+  interval on the pooled counts. All six runs (seeds 42–44 on both
+  datasets) are in the committed results (§4.6).
 * **Cross-dataset:** every model trained on one dataset is also scored on the
   other dataset's test split.
 
 **Compute:** on an 8-core CPU with no GPU, the seed-42 run takes 1,663 s on
-PhiUSIIL and 1,725 s on PhreshPhish; each later seed run took about as long, so
-all six runs take about three hours. Models
+PhiUSIIL and 1,725 s on PhreshPhish; seed 43 took 1,793 s on PhreshPhish and
+seed 44 1,851 s on PhiUSIIL, so all six runs take about three hours. (The
+logged times of the other two seed runs, 8,184 s and 10,434 s, include periods
+when the machine was suspended.) Models
 train on the full training split (PhreshPhish: a fixed 164,759-URL
 subsample, the size of the PhiUSIIL training split). Attacks are subsampled
 to 1,000 test phishing URLs and HopSkipJump to 200, and adversarial training
@@ -478,26 +483,40 @@ ones that carry over: F1 0.7651 (GBM) and 0.8350 (CNN), FPR 0.0952 and
 ### 4.6 Variation across seeds
 
 [`results/SEEDS.md`](../results/SEEDS.md) has every model and attack. The
-committed results include **PhreshPhish seeds 42 and 43** and **PhiUSIIL seed
-42 only**. The other three seed runs (PhiUSIIL 43 and 44, PhreshPhish 44) take
-about half an hour each and had not finished when these results were
-committed. `make seeds` reproduces them.
+committed results include **seeds 42, 43 and 44 on both datasets** (six
+runs). Each cell below is the mean over the three seeds, the 95% Wilson
+interval on the evasions pooled over the seeds (sampling error only), and the
+per-seed min–max.
 
-PhreshPhish, seed 42 / seed 43:
+PhreshPhish, seeds 42–44:
 
-| Model | Greedy | Held-out edits | Beam, extended | Clean F1 |
+| Model | Greedy | Held-out edits | Beam, extended | Clean F1 (per seed) |
 |---|---|---|---|---|
-| GBM (baseline) | 0.832 / 0.861 | 0.482 / 0.498 | 0.959 / 0.969 | 0.9289 / 0.9312 |
-| Char-CNN (baseline) | 0.956 / 0.956 | 0.755 / 0.747 | 1.000 / 1.000 | 0.9465 / 0.9512 |
-| GBM + adv. training | 0.347 / 0.355 | 0.352 / 0.418 | 0.700 / 0.725 | 0.9323 / 0.9317 |
-| Char-CNN + adv. training | 0.176 / 0.243 | 0.551 / 0.645 | 0.976 / 0.993 | 0.9499 / 0.9550 |
+| GBM (baseline) | 0.849 [0.835, 0.862], 0.832–0.861 | 0.493 [0.474, 0.512], 0.482–0.498 | 0.961 [0.953, 0.967], 0.954–0.969 | 0.9289 / 0.9312 / 0.9314 |
+| Char-CNN (baseline) | 0.951 [0.942, 0.958], 0.942–0.956 | 0.732 [0.715, 0.748], 0.693–0.755 | 1.000 [0.998, 1.000], 0.999–1.000 | 0.9465 / 0.9512 / 0.9515 |
+| GBM + adv. training | 0.367 [0.350, 0.386], 0.347–0.400 | 0.395 [0.377, 0.414], 0.352–0.418 | 0.725 [0.708, 0.741], 0.700–0.750 | 0.9323 / 0.9317 / 0.9320 |
+| Char-CNN + adv. training | 0.229 [0.214, 0.244], 0.176–0.269 | 0.621 [0.603, 0.638], 0.551–0.668 | 0.987 [0.982, 0.991], 0.976–0.994 | 0.9499 / 0.9550 / 0.9492 |
 
-The baselines are stable: their rates move by at most 2.9 points. The
-adversarially trained models move more (CNN greedy 0.176 → 0.243, held-out
-0.551 → 0.645), which fits the picture that their robustness is narrow and
-depends on what the training-time attack happened to find. Every conclusion
-in §4.4 holds for both seeds. Across seeds the append-only tier reaches at
-most 0.012 (GBM + adv. training, seed 43).
+PhiUSIIL, seeds 42–44 (held-out edits evade at most 0.002 for these four
+models, so that column is omitted):
+
+| Model | Greedy | Beam, extended | Hybrid white-box | Clean F1 (per seed) |
+|---|---|---|---|---|
+| GBM (baseline) | 0.635 [0.618, 0.652], 0.617–0.645 | 0.798 [0.783, 0.812], 0.774–0.812 | – | 0.9978 / 0.9977 / 0.9980 |
+| Char-CNN (baseline) | 0.579 [0.561, 0.596], 0.506–0.630 | 0.827 [0.813, 0.840], 0.797–0.844 | 0.624 [0.607, 0.641], 0.527–0.710 | 0.9980 / 0.9980 / 0.9981 |
+| GBM + adv. training | 0.343 [0.326, 0.360], 0.327–0.358 | 0.412 [0.394, 0.430], 0.383–0.432 | – | 0.9961 / 0.9960 / 0.9957 |
+| Char-CNN + adv. training | 0.298 [0.282, 0.315], 0.289–0.309 | 0.412 [0.394, 0.430], 0.374–0.443 | 0.298 [0.282, 0.314], 0.281–0.317 | 0.9967 / 0.9971 / 0.9961 |
+
+On PhreshPhish the baselines are fairly stable: their per-seed rates span at
+most 2.9 points under the greedy and beam attacks and 6.2 points under
+held-out edits (CNN). The adversarially trained models move more (CNN greedy
+0.176–0.269, held-out 0.551–0.668), which fits the picture that their
+robustness is narrow and depends on what the training-time attack happened to
+find. On PhiUSIIL the baseline CNN is the least stable cell: greedy evasion
+0.506–0.630 and hybrid 0.527–0.710 with clean F1 identical to three decimals,
+the same sensitivity near the threshold noted in §3.5. Every conclusion in §4.2–4.4
+holds for all three seeds on both datasets. Across seeds the append-only tier
+reaches at most 0.012 (PhreshPhish GBM + adv. training, seed 43).
 
 
 ### 4.7 Defense tradeoffs
@@ -567,9 +586,10 @@ Clean F1, greedy evasion and detection under greedy attack, as GBM / CNN
 * **URL only.** Detectors never see page content, hosting, certificates or
   reputation, which real filters use. A URL-only layer that is easy to evade
   can still be useful inside a larger system.
-* **Limited seeds.** The committed results cover two seeds on PhreshPhish and
-  one on PhiUSIIL; the remaining seed runs had not finished (§4.6). That
-  shows some run-to-run variation but is not a variance study. Per-run sampling
+* **Limited seeds.** The committed results cover three seeds (42–44) on each
+  dataset (§4.6). That shows run-to-run variation, which is large for some
+  cells (PhiUSIIL baseline CNN greedy 0.506–0.630), but three seeds are not a
+  variance study. Per-run sampling
   error on 1,000 attacked URLs is shown as Wilson intervals.
 * **Attacks are subsampled** (1,000 URLs; HopSkipJump 200 URLs) and
   PhreshPhish training uses a fixed 164,759-URL subsample, to keep compute

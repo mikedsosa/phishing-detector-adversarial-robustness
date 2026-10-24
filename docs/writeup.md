@@ -64,15 +64,18 @@ Models that only look at the registrable domain can't be evaded under these
 rules at all, because nothing the attacker changes reaches them. They pay for
 it in accuracy: 0.817 and 0.846 F1 on PhreshPhish. When the attacker can only
 append a parameter or fragment, which is roughly the position of someone using
-a compromised site they don't fully control, evasion stayed at 0.7% or lower.
+a compromised site they don't fully control, evasion stayed at 1.2% or lower in every run.
 
 Models also didn't carry over between datasets. The PhreshPhish-trained GBM
 flagged 99.9% of PhiUSIIL's legitimate homepages as phishing (F1 0.571). It
 had learned the opposite habit: a bare homepage looked odd to it.
 
-A second PhreshPhish run with a different seed told the same story. The
-baselines moved by three points at most. The adversarially trained CNN moved
-more, from 17.6% to 24.3% under the greedy attack.
+I re-ran everything with two more seeds (42, 43 and 44 on both datasets) and
+got the same story. Averaged over the three PhreshPhish runs, greedy evasion
+was 84.9% for the GBM and 95.1% for the CNN, with pooled 95% intervals no wider
+than ±1.5 points. The adversarially trained CNN moved more between
+seeds, from 17.6% to 26.9% under the greedy attack. On PhiUSIIL the baseline
+CNN's greedy evasion ranged from 50.6% to 63.0%.
 
 ## What I'd take from this
 
