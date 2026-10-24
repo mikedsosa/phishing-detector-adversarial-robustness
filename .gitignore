@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+data/raw/
+results-smoke/
+*.zip
+*.pt
+*.pkl
+.env
+# Per-URL attack outputs contain (possibly still live) phishing URLs; regenerate with `make reproduce`.
+results/attack_sample_urls.csv
+results/adversarial_examples_greedy.csv
