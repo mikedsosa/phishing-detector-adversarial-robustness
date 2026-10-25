@@ -158,6 +158,11 @@ in every cell.
 For the GBM, the leak isn't what makes PhiUSIIL easy; the bare-homepage
 format shortcut is. <!-- ROUND2-GROUPED-CNN -->
 
+> **TODO (round 2, not yet aggregated):** char-CNN results on the
+> domain-grouped split. The per-seed runs are in `results/phiusiil-grouped/`
+> and `results/seeds/full-grouped-seed43/`, `-seed44/`; fill this in from
+> `results/SEEDS.md` after `python -m phishadv.aggregate`. No numbers yet.
+
 Round-1 random-split PhiUSIIL table, seeds 42–44 (full results in
 [`results/SEEDS.md`](results/SEEDS.md)). Same cell format as the PhreshPhish
 table; denominators are 2,989–2,993 flagged URLs pooled over seeds for each
@@ -224,6 +229,13 @@ within 10 edits (table above). Per-budget curves: `evasion_vs_queries.csv` in
 each results folder.
 
 <!-- ROUND2-DEFENSES -->
+
+> **TODO (round 2, runs still going):** mixed adversarial training and
+> ensemble defenses, with paired McNemar tests against the baseline. The
+> PhreshPhish runs (seeds 42–44) are done; the domain-grouped PhiUSIIL runs
+> for seeds 43 and 44 are still training. Numbers go here, and
+> `results/defenses/DEFENSES.md` (linked above) is written, once
+> `python -m phishadv.defense_report` runs after they finish.
 
 ### Other findings carried over from round 1
 

@@ -664,6 +664,9 @@ pooled over seeds in every cell.
 The leak barely moves the GBM's numbers; beam evasion is 3 points higher on
 the grouped split. The format shortcut (§4.1) dominates. <!-- ROUND2-PAPER-GROUPED-CNN -->
 
+**TODO (round 2):** char-CNN rows for the grouped split, from
+`results/SEEDS.md` once the grouped seeds are aggregated. No numbers yet.
+
 ### 4.11 Low base rates and low-FPR thresholds (PhreshPhish, seed 42)
 
 Reweighting phishing test URLs to 1% of traffic, precision at 90% recall is
@@ -676,6 +679,12 @@ rises to 99.2% (GBM), 98.4% (CNN), 73.8% (GBM + adv. training) and 38.5% (CNN
 Stricter thresholds trade recall for false positives but make evasion easier.
 
 <!-- ROUND2-PAPER -->
+
+**TODO (round 2, runs still going):** §4.12 on mixed adversarial training
+and ensembles, with paired McNemar tests (answers the "no paired tests"
+limitation in §5) and the PhiUSIIL grouped-split operating point
+(`python -m phishadv.operating --dataset phiusiil-grouped`). Waits on the
+grouped PhiUSIIL defense runs for seeds 43 and 44.
 
 ## 5. Limitations and honest negatives
 
@@ -725,7 +734,8 @@ Stricter thresholds trade recall for false positives but make evasion easier.
 * **Two baselines only.** We test a lexical GBM and a character CNN. There is
   no URLNet [10] or transformer model, no deployed commercial detector, and
   no reimplementation of the gray-box defense of Apruzzese & Subrahmanian
-  [17]. We also built no attack aimed specifically at canonicalization.
+  [17]. We also built no attack aimed specifically at canonicalization and
+  tried no LLM-written URL rewrites.
 * **One source per dataset, and the domain definition matters.** Each
   benchmark comes from a single collection pipeline. Many of PhreshPhish's
   most common phishing domains are hosting platforms, and whether a tenant
