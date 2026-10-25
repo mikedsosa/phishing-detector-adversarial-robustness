@@ -92,17 +92,38 @@ class Split:
     test: pd.DataFrame
 
 
+def registrable_domains(urls) -> np.ndarray:
+    from .urls import parse
+
+    return np.array([parse(u).registrable for u in urls], dtype=object)
+
+
+def _group_split(df: pd.DataFrame, size: float, seed: int) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Split so that no registrable domain appears on both sides (``size`` is the share of domains)."""
+    from sklearn.model_selection import GroupShuffleSplit
+
+    groups = registrable_domains(df.url)
+    a, b = next(GroupShuffleSplit(n_splits=1, test_size=size, random_state=seed).split(df, groups=groups))
+    return df.iloc[a], df.iloc[b]
+
+
 def split(df: pd.DataFrame, seed: int, test_size: float = 0.2, val_size: float = 0.1,
-          max_train: int | None = None, max_test: int | None = None) -> Split:
+          max_train: int | None = None, max_test: int | None = None, group_by_domain: bool = False) -> Split:
     """Train/val/test split; optionally subsample the training and test sets.
 
     If ``df`` has a ``split`` column (PhreshPhish), its time-based train/test
     assignment is kept and the validation set is a stratified ``val_size``
-    share of the training rows. Otherwise the split is stratified at random.
+    share of the training rows. Otherwise the split is stratified at random, or,
+    with ``group_by_domain``, grouped by registrable domain so that no domain is
+    in more than one of train, validation and test (not stratified; the class
+    balance stays close because most domains have one URL).
     """
     if "split" in df.columns:
         trval, test = df[df["split"] == "train"], df[df["split"] == "test"]
         train, val = train_test_split(trval, test_size=val_size, stratify=trval["y"], random_state=seed)
+    elif group_by_domain:
+        trval, test = _group_split(df, test_size, seed)
+        train, val = _group_split(trval, val_size / (1 - test_size), seed)
     else:
         trval, test = train_test_split(df, test_size=test_size, stratify=df["y"], random_state=seed)
         rel = val_size / (1 - test_size)

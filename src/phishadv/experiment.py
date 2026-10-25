@@ -46,6 +46,7 @@ class Config:
     beam_budget: int = 20
     cross_dataset: str | None = None  # also score every model on this dataset's test split
     cross_data: str | None = None
+    group_split: bool = False  # PhiUSIIL: split by registrable domain (no domain in both train and test)
 
 
 _SMOKE = dict(max_train=None, cnn_epochs=1, n_attack=40, budget=4, at_rounds=1, at_n_per_round=60, n_hsj=8,
@@ -53,6 +54,8 @@ _SMOKE = dict(max_train=None, cnn_epochs=1, n_attack=40, budget=4, at_rounds=1, 
 CONFIGS = {
     "full": Config(name="full", data=str(RAW_CSV), cross_dataset="phreshphish", cross_data=str(PHRESH_CSV)),
     # PhreshPhish: training set subsampled to the size of the PhiUSIIL training set; full time-based test split.
+    "full-grouped": Config(name="full-grouped", data=str(RAW_CSV), group_split=True, cross_dataset="phreshphish",
+                           cross_data=str(PHRESH_CSV)),
     "phresh": Config(name="phresh", data=str(PHRESH_CSV), dataset="phreshphish", max_train=164759,
                      cross_dataset="phiusiil", cross_data=str(RAW_CSV)),
     "smoke": Config(name="smoke", data=str(SAMPLE_CSV), cross_dataset="phreshphish",
@@ -60,7 +63,8 @@ CONFIGS = {
     "smoke-phresh": Config(name="smoke-phresh", data=str(PHRESH_SAMPLE_CSV), dataset="phreshphish",
                            cross_dataset="phiusiil", cross_data=str(SAMPLE_CSV), **_SMOKE),
 }
-DEFAULT_OUT = {"full": "results", "phresh": "results/phreshphish", "smoke": "results-smoke",
+DEFAULT_OUT = {"full": "results", "full-grouped": "results/phiusiil-grouped", "phresh": "results/phreshphish",
+               "smoke": "results-smoke",
                "smoke-phresh": "results-smoke/phreshphish"}
 BUDGETS = list(range(0, 11))
 
@@ -120,10 +124,10 @@ def adversarial_training(kind: str, view: str, base, train: pd.DataFrame, cfg: C
 def run(cfg: Config, out: Path, save_models: Path | None = None) -> dict:
     t0 = time.time()
     seed_everything(cfg.seed)
-    torch.set_num_threads(max(1, min(8, os.cpu_count() or 1)))
+    torch.set_num_threads(int(os.environ.get("PHISHADV_THREADS", max(1, min(8, os.cpu_count() or 1)))))
     out.mkdir(parents=True, exist_ok=True)
     df = load_dataset(cfg.dataset, cfg.data)
-    sp = split(df, cfg.seed, max_train=cfg.max_train, max_test=cfg.max_test)
+    sp = split(df, cfg.seed, max_train=cfg.max_train, max_test=cfg.max_test, group_by_domain=cfg.group_split)
     log(f"data: {len(df)} unique URLs ({df.y.mean():.3f} phishing); "
         f"train={len(sp.train)} val={len(sp.val)} test={len(sp.test)}")
     tr_u, tr_y = sp.train.url.tolist(), sp.train.y.to_numpy()

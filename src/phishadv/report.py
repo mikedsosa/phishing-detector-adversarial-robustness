@@ -17,6 +17,9 @@ LABELS = {
     "gbm_domain": "GBM, domain-only", "cnn_domain": "Char-CNN, domain-only",
     "gbm_raw_at": "GBM + adv. training", "cnn_raw_at": "Char-CNN + adv. training",
     "gbm_canon_at": "GBM + canon. + adv. training",
+    "gbm_raw_mix": "GBM + mixed adv. training", "cnn_raw_mix": "Char-CNN + mixed adv. training",
+    "ens_raw": "GBM+CNN ensemble (baseline)", "ens_raw_at": "GBM+CNN ensemble + adv. training",
+    "ens_raw_mix": "GBM+CNN ensemble + mixed adv. training",
     "format_rule": "Format rule (not https://www.<domain>)",
     "query_rule": "Query rule (URL has a query string)",
 }
