@@ -135,6 +135,13 @@ def hero(summary: pd.DataFrame, out: Path, datasets=None) -> None:
         d = summary[summary.dataset == ds].set_index("model")
         x = np.arange(len(conds))
         w = 0.2
+        # Conditions where every bar is ~100%: one shared label instead of four overlapping ones.
+        allfull = set()
+        for i, (a, _) in enumerate(conds):
+            v = [d.loc[m].get(f"{a}_caught", np.nan) for m, _ in series if m in d.index]
+            if v and all(np.isfinite(t) and t >= 0.995 for t in v):
+                allfull.add(i)
+                ax.text(x[i], 103, "all ≈100", ha="center", va="bottom", fontsize=10.5)
         for j, (m, col) in enumerate(series):
             if m not in d.index:
                 continue
@@ -144,13 +151,15 @@ def hero(summary: pd.DataFrame, out: Path, datasets=None) -> None:
             hi = np.array([100 * r.get(f"{a}_caught_hi", np.nan) for a, _ in conds])
             ax.bar(x + (j - 1.5) * w, vals, w, color=col, label=LABELS[m], yerr=[vals - lo, hi - vals],
                    capsize=2.5, error_kw={"lw": 1})
-            for xi, v, h in zip(x + (j - 1.5) * w, vals, hi):
-                if np.isfinite(v):
+            for i, (xi, v, h) in enumerate(zip(x + (j - 1.5) * w, vals, hi)):
+                if np.isfinite(v) and i not in allfull:
                     ax.text(xi, h + 1.2, f"{v:.0f}", ha="center", va="bottom", fontsize=9.5)
         ax.set_xticks(x, [c for _, c in conds], fontsize=13)
         n = int(d["n_seeds"].max())
-        ax.set_title(f"{DATASET_LABELS[ds]}\n({n} seed{'s' if n > 1 else ''}, 95% CI)", fontsize=14)
-        ax.set_ylim(0, 100)
+        title = {"phiusiil": "PhiUSIIL (random split)"}.get(ds, DATASET_LABELS[ds])
+        ax.set_title(f"{title}\n({n} seed{'s' if n > 1 else ''}, 95% CI)", fontsize=14, pad=10)
+        ax.set_ylim(0, 110)
+        ax.set_yticks(range(0, 101, 20))
         ax.tick_params(axis="y", labelsize=12)
         ax.grid(axis="y", alpha=0.3)
         ax.spines[["top", "right"]].set_visible(False)

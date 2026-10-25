@@ -24,7 +24,9 @@ time-split PhreshPhish.
 
 *Share of 1,000 sampled phishing test URLs per seed that each model flags and
 still flags after the attack (same denominator for every model), pooled over
-seeds 42–44, 95% Wilson intervals. Data: [`results/hero_data.csv`](results/hero_data.csv).*
+seeds 42–44, 95% Wilson intervals. The PhiUSIIL panel uses the round-1 random
+split; GBM results on the domain-grouped split are within a few points (see
+below). Data: [`results/hero_data.csv`](results/hero_data.csv).*
 
 ## Quickstart (about 10 minutes, offline after install)
 
