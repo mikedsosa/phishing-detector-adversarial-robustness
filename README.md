@@ -136,7 +136,30 @@ Adversarial training raises the false-positive rate: for the CNN from 2.2% to
   97.9–99.9% of PhiUSIIL's (the CNN 37.2–53.4%). Neither dataset alone
   predicts performance on the other.
 
-<!-- ROUND2-OPERATING -->
+### Low base rate and low false-positive thresholds (PhreshPhish, seed 42)
+
+Real traffic is mostly benign. Reweighting the test set so phishing is 1% of
+URLs, the baseline CNN's precision at 90% recall is 40.0% (GBM: 22.5%); at
+0.05% it is 3.2% (GBM: 1.4%). Average precision falls from 0.92 to 0.39 (CNN)
+between a 5% and a 0.05% base rate.
+
+A lower threshold doesn't help against the attacks. Choosing the threshold on
+validation data for at most 1% or 0.1% FPR and rerunning the attacks there
+(95% Wilson intervals; denominators are the URLs flagged at that threshold):
+
+| Model | Target val. FPR | Test FPR | Test recall | Greedy | Held-out | Beam |
+|---|---|---|---|---|---|---|
+| GBM | default (t = 0.5) | 3.06% | 89.9% | 83.2% [80.6, 85.5] | 48.2% [45.0, 51.5] | 95.9% [94.4, 97.0] |
+| GBM | 1% | 1.16% | 85.3% | 91.7% [89.7, 93.4] | 51.4% [48.1, 54.7] | 98.2% [97.0, 98.9] |
+| GBM | 0.1% | 0.12% | 72.7% | 99.2% [98.2, 99.6] | 76.3% [73.0, 79.2] | 99.9% [99.2, 100.0] |
+| Char-CNN | default | 2.21% | 92.2% | 95.6% [94.1, 96.7] | 75.5% [72.6, 78.2] | 100.0% [99.6, 100.0] |
+| Char-CNN | 0.1% | 0.15% | 70.3% | 98.4% [97.2, 99.1] | 74.1% [70.7, 77.2] | 100.0% [99.4, 100.0] |
+| GBM + adv. training | 0.1% | 0.12% | 75.0% | 73.8% [70.6, 76.9] | 67.7% [64.3, 70.9] | 93.7% [91.8, 95.2] |
+| Char-CNN + adv. training | 0.1% | 0.14% | 75.5% | 38.5% [35.1, 42.0] | 71.7% [68.4, 74.8] | 100.0% [99.5, 100.0] |
+
+A strict threshold flags fewer phishing URLs to begin with, and the attacker
+only has to push a score below a higher bar, so evasion goes up. Full tables:
+[`results/operating/phreshphish/OPERATING.md`](results/operating/phreshphish/OPERATING.md).
 
 ### Attacker knowledge: query budgets and label-only access
 
