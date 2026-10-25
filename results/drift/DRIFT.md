@@ -31,19 +31,29 @@ PhreshPhish's train/test split is chronological: training URLs are dated 2024-07
 
 ## Across datasets (every seed run)
 
-Train on one dataset, score the other's test split. Mean [min-max] over seeds.
+Train on one dataset, score the other's test split. Mean [min-max] over seeds, two decimals so that near-total false-positive rates are not rounded to 100%.
 
 | Trained on | Tested on | Model | Seeds | FPR on legitimate URLs | Recall on phishing |
 |---|---|---|---|---|---|
-| PhiUSIIL | PhreshPhish | GBM (baseline) | 3 | 100.0% [100.0-100.0] | 93.8% [93.8-93.9] |
-| PhiUSIIL | PhreshPhish | Char-CNN (baseline) | 3 | 100.0% [100.0-100.0] | 93.7% [93.7-93.8] |
-| PhiUSIIL | PhreshPhish | GBM + adv. training | 3 | 100.0% [100.0-100.0] | 94.3% [94.3-94.4] |
-| PhiUSIIL | PhreshPhish | Char-CNN + adv. training | 3 | 100.0% [100.0-100.0] | 95.2% [94.6-95.6] |
-| PhiUSIIL | PhreshPhish | Format rule (not https://www.<domain>) | 3 | 95.7% [95.7-95.7] | 93.2% [93.2-93.2] |
-| PhiUSIIL | PhreshPhish | Query rule (URL has a query string) | 3 | 0.1% [0.1-0.1] | 24.0% [24.0-24.0] |
-| PhreshPhish | PhiUSIIL | GBM (baseline) | 3 | 99.1% [97.9-99.9] | 93.6% [93.3-93.8] |
-| PhreshPhish | PhiUSIIL | Char-CNN (baseline) | 3 | 46.6% [37.2-53.4] | 93.8% [92.6-95.1] |
-| PhreshPhish | PhiUSIIL | GBM + adv. training | 3 | 99.4% [99.2-99.7] | 94.4% [94.1-94.7] |
-| PhreshPhish | PhiUSIIL | Char-CNN + adv. training | 3 | 73.7% [62.4-85.2] | 94.4% [93.5-95.8] |
-| PhreshPhish | PhiUSIIL | Format rule (not https://www.<domain>) | 3 | 0.0% [0.0-0.0] | 99.0% [99.0-99.0] |
-| PhreshPhish | PhiUSIIL | Query rule (URL has a query string) | 3 | 0.0% [0.0-0.0] | 6.1% [6.0-6.2] |
+| PhiUSIIL | PhreshPhish | GBM (baseline) | 3 | 100.00% [100.00-100.00] | 93.82% [93.80-93.85] |
+| PhiUSIIL | PhreshPhish | GBM + canonicalization | 3 | 92.75% [92.73-92.77] | 91.53% [91.40-91.61] |
+| PhiUSIIL | PhreshPhish | GBM, domain-only | 3 | 9.59% [9.52-9.69] | 68.08% [67.19-68.96] |
+| PhiUSIIL | PhreshPhish | Char-CNN (baseline) | 3 | 100.00% [99.99-100.00] | 93.73% [93.66-93.81] |
+| PhiUSIIL | PhreshPhish | Char-CNN + canonicalization | 3 | 92.55% [92.44-92.63] | 92.97% [91.52-93.82] |
+| PhiUSIIL | PhreshPhish | Char-CNN, domain-only | 3 | 8.36% [8.27-8.46] | 77.92% [77.22-78.72] |
+| PhiUSIIL | PhreshPhish | GBM + adv. training | 3 | 100.00% [100.00-100.00] | 94.34% [94.28-94.38] |
+| PhiUSIIL | PhreshPhish | Char-CNN + adv. training | 3 | 100.00% [100.00-100.00] | 95.23% [94.59-95.63] |
+| PhiUSIIL | PhreshPhish | GBM + canon. + adv. training | 3 | 92.77% [92.77-92.77] | 91.77% [91.72-91.85] |
+| PhiUSIIL | PhreshPhish | Format rule (not https://www.<domain>) | 3 | 95.66% [95.66-95.66] | 93.16% [93.16-93.16] |
+| PhiUSIIL | PhreshPhish | Query rule (URL has a query string) | 3 | 0.06% [0.06-0.06] | 23.96% [23.96-23.96] |
+| PhreshPhish | PhiUSIIL | GBM (baseline) | 3 | 99.10% [97.92-99.87] | 93.56% [93.34-93.78] |
+| PhreshPhish | PhiUSIIL | GBM + canonicalization | 3 | 24.18% [23.27-24.69] | 75.29% [74.84-75.66] |
+| PhreshPhish | PhiUSIIL | GBM, domain-only | 3 | 12.65% [12.25-12.96] | 60.47% [59.91-60.94] |
+| PhreshPhish | PhiUSIIL | Char-CNN (baseline) | 3 | 46.56% [37.17-53.37] | 93.80% [92.63-95.11] |
+| PhreshPhish | PhiUSIIL | Char-CNN + canonicalization | 3 | 28.91% [20.14-38.22] | 79.31% [74.04-83.93] |
+| PhreshPhish | PhiUSIIL | Char-CNN, domain-only | 3 | 10.00% [7.84-12.32] | 64.46% [61.51-66.95] |
+| PhreshPhish | PhiUSIIL | GBM + adv. training | 3 | 99.44% [99.17-99.74] | 94.39% [94.13-94.71] |
+| PhreshPhish | PhiUSIIL | Char-CNN + adv. training | 3 | 73.67% [62.37-85.15] | 94.35% [93.51-95.76] |
+| PhreshPhish | PhiUSIIL | GBM + canon. + adv. training | 3 | 26.34% [26.23-26.48] | 77.00% [76.65-77.21] |
+| PhreshPhish | PhiUSIIL | Format rule (not https://www.<domain>) | 3 | 0.03% [0.01-0.04] | 98.99% [98.99-99.00] |
+| PhreshPhish | PhiUSIIL | Query rule (URL has a query string) | 3 | 0.00% [0.00-0.00] | 6.13% [5.98-6.23] |

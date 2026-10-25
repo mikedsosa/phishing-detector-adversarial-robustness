@@ -49,11 +49,14 @@ def time_drift(models_dir: Path, seed: int = 42) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def write(root: Path = Path(".")) -> None:
+def write(root: Path = Path("."), reuse_time: bool = False) -> None:
     out = root / "results/drift"
     out.mkdir(parents=True, exist_ok=True)
-    td = time_drift(root / "models/phreshphish")
-    td.to_csv(out / "time_drift.csv", index=False)
+    if reuse_time and (out / "time_drift.csv").exists():
+        td = pd.read_csv(out / "time_drift.csv")
+    else:
+        td = time_drift(root / "models/phreshphish")
+        td.to_csv(out / "time_drift.csv", index=False)
     _, _, cross = collect(find_runs(root))
     cross.to_csv(out / "cross_dataset_by_seed.csv", index=False)
 
@@ -84,4 +87,6 @@ def write(root: Path = Path(".")) -> None:
 
 
 if __name__ == "__main__":
-    write()
+    import sys
+
+    write(reuse_time="--reuse-time" in sys.argv)
