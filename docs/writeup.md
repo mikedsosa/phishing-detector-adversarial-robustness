@@ -79,6 +79,25 @@ than ±1.5 points. The adversarially trained CNN moved more between
 seeds, from 17.6% to 26.9% under the greedy attack. On PhiUSIIL the baseline
 CNN's greedy evasion ranged from 50.6% to 63.0%.
 
+## Round 2: checking my own work
+
+A review pointed out that PhiUSIIL's random split leaks domains: 38.6% of
+phishing test URLs share a registrable domain with a phishing training URL.
+I re-split by domain. For the GBM the numbers barely moved (greedy evasion
+61.7% vs. 63.5% over three seeds), so the shortcut that makes PhiUSIIL easy
+is the homepage format, not the leak.
+
+PhreshPhish's test set is later than its training set, so I broke it down by
+month. The GBM caught 95.9% of phishing on held-out training-period data but
+58.7% in the first month after training ended, and its false-positive rate
+reached 8.4% in December.
+
+Two other checks made the picture worse, not better. Tuning the threshold for
+a 0.1% false-positive rate raised greedy evasion of the GBM to 99.2%, because
+a stricter threshold is easier to slip under. And an attacker who only sees
+"blocked / not blocked" and tries random valid edits still got past about a
+quarter of detections within 10 edits.
+
 ## What I'd take from this
 
 * A near-perfect benchmark score can come from how the legitimate URLs were
