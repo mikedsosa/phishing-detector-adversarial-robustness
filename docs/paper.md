@@ -31,7 +31,9 @@ of training still evade 35.2% and 55.1%, and a beam search over 19
 transformations evades 70.0% and 97.6%. Models also fail across datasets:
 the PhreshPhish-trained GBM flags 99.9% of PhiUSIIL's legitimate URLs, and
 PhiUSIIL-trained full-URL models flag 93–100% of PhreshPhish's. Domain-only
-models can't be evaded within the threat model but reach only 0.75–0.85 F1.
+models can't be evaded within the threat model (although wrapping the URL in a
+link shortener, which is outside our threat model, still evades the
+domain-only GBM about 24% of the time) but reach only 0.75–0.85 F1.
 An unconstrained feature-space attack (ART HopSkipJump) "succeeds" 99.5–100%
 of the time, but at most 6% of its outputs correspond to a realizable URL.
 Over three seeds per dataset (42–44), the PhreshPhish baselines' greedy
@@ -43,7 +45,7 @@ evasion averages 84.9% (GBM, pooled 95% CI [83.5, 86.2]) and 95.1% (CNN,
 ## 1. Background and related work
 
 **Adversarial examples and evasion.** Biggio et al. [1] showed that
-gradient-based evasion attacks at test time can defeat classifiers in
+gradient-based evasion attacks at test time can evade classifiers in
 security settings such as PDF-malware detection. Goodfellow et al. [2]
 popularized fast gradient attacks and adversarial training for neural
 networks, and Madry et al. [3] framed adversarial training as robust
@@ -60,7 +62,24 @@ instead use cheap, domain-specific tricks. For phishing specifically,
 SpacePhish [7] contrasts feature-space and problem-space evasion of ML
 phishing-website detectors. Earlier work studied adversarial sampling against
 phishing classifiers [8] and adversarial attacks on URL-based phishing
-detectors [9].
+detectors [9]. The closest prior work is Sabir et al. [15], whose URLBUG
+attack on 50 URL detectors cut median MCC from 0.92 to 0.02; our results
+confirm that cheap problem-space URL edits work, on newer data. Multi-SpacePhish
+[16] extends SpacePhish, and Apruzzese & Subrahmanian [17] propose a
+phishing-specific defense against gray-box attacks that we do not reimplement.
+
+**Robustness to unseen attacks and evaluation practice.** That adversarial
+training against one perturbation type transfers poorly to others is known
+(Tramèr & Boneh [18]; Kang et al. [19], whose "unforeseen adversaries" design is
+the closest analogue to our held-out edit family). Our contribution there is a
+measurement in the URL problem space, not a new concept. We follow the
+adaptive-attack guidance of Tramèr et al. [20] and Carlini et al. [21] by
+attacking every defended model directly, but with only two adversarial-training
+rounds and hand-written edits, so our defended numbers are upper bounds on
+robustness. Arp et al. [22] catalogue pitfalls such as data snooping and
+spurious correlations, which match the dataset artifacts and the
+cross-dataset collapse we report, and TESSERACT [23] argues for
+time-aware evaluation, which PhreshPhish's split provides.
 
 **URL-based detection.** Lexical-feature models and character-level CNNs are
 standard URL-only baselines. URLNet [10] combines character- and word-level
@@ -230,8 +249,10 @@ Each detector can read one of three *views* of the URL:
 2. **Canonicalization:** train and test on the `canon` view, which removes
    features the attacker controls for free.
 3. **Domain-only:** train and test on the registrable domain only. This is
-   robust *by construction* under our threat model, because nothing the
-   attacker may change reaches the model.
+   unaffected by construction by the edits in our threat model, because
+   nothing the attacker may change reaches the model. (A link-shortener wrap,
+   which is outside the threat model, still evades the domain-only GBM 23.9%
+   of the time on PhiUSIIL and 23.5% on PhreshPhish, seed 42.)
 
 ### 3.5 Metrics
 
@@ -423,7 +444,7 @@ domain-only model's detections.
 Four things stand out.
 
 * **More realistic benign data made evasion easier.** Benign PhreshPhish URLs
-  are mostly deep links (92.6% have a non-root path), so the models can't
+  are mostly deep links (92.5% have a non-root path), so the models can't
   lean on "homepage = legitimate". They lean on path and subdomain content
   instead, and those are exactly what the attacker controls. Successful
   greedy attacks mostly used path edits (GBM 1,264, CNN 1,460), then
@@ -547,7 +568,9 @@ Clean F1, greedy evasion and detection under greedy attack, as GBM / CNN
   PhreshPhish, because PhreshPhish's legitimate URLs don't share one format.
   On PhreshPhish it helps the GBM (0.832 → 0.569) far more than the CNN
   (0.956 → 0.918).
-* **Domain-only** is unevadable *within* our threat model by construction,
+* **Domain-only** is unevadable *within* our threat model by construction
+  (a link-shortener wrap, outside the threat model, still evades the
+  domain-only GBM about 24% of the time).
   On PhreshPhish its detection under greedy attack (0.745 / 0.764) is close
   to the best model's (adversarially trained CNN, 0.793), and unlike that
   model it doesn't fall under beam search (CNN + adv. training: 0.023). Its clean recall (0.64–0.76) and FPR (3–8%)
@@ -635,15 +658,16 @@ deployed anywhere.
 6. G. Apruzzese, H. S. Anderson, S. Dambra, D. Freeman, F. Pierazzi,
    K. Roundy. "'Real Attackers Don't Compute Gradients': Bridging the Gap
    Between Adversarial ML Research and Practice." IEEE SaTML 2023.
-   arXiv:2212.14315.
+   doi:10.1109/SaTML54575.2023.00031. arXiv:2212.14315.
 7. G. Apruzzese, M. Conti, Y. Yuan. "SpacePhish: The Evasion-space of
    Adversarial Attacks against Phishing Website Detectors using Machine
-   Learning." ACSAC 2022.
+   Learning." ACSAC 2022, pp. 171–185. doi:10.1145/3564625.3567980.
 8. H. Shirazi, B. Bezawada, I. Ray, C. Anderson. "Adversarial Sampling
-   Attacks Against Phishing Detection." DBSec 2019, LNCS 11559.
+   Attacks Against Phishing Detection." DBSec 2019, LNCS 11559, pp. 83–101.
+   doi:10.1007/978-3-030-22479-0_5.
 9. A. AlEroud, G. Karabatis. "Bypassing Detection of URL-based Phishing
    Attacks Using Generative Adversarial Deep Neural Networks." IWSPA 2020
-   (ACM CODASPY workshop).
+   (ACM CODASPY workshop), pp. 53–60. doi:10.1145/3375708.3380315.
 10. H. Le, Q. Pham, D. Sahoo, S. C. H. Hoi. "URLNet: Learning a URL
     Representation with Deep Learning for Malicious URL Detection." 2018.
     arXiv:1802.03162.
@@ -658,3 +682,29 @@ deployed anywhere.
 14. T. Dalton, H. Gowda, G. Rao, S. Pargi, A. H. Khodabakhshi, J. Rombs,
     S. Jou, M. Marwah. "PhreshPhish: A Real-World, High-Quality, Large-Scale
     Phishing Website Dataset and Benchmark." 2025. arXiv:2507.10854.
+15. H. Sabir, R. Gaire, A. Abuadbba. "Reliability and Robustness analysis of
+    Machine Learning based Phishing URL Detectors." IEEE TDSC, 2022.
+    doi:10.1109/TDSC.2022.3218043. arXiv:2005.08454.
+16. Y. Yuan, G. Apruzzese, M. Conti. "Multi-SpacePhish: Extending the
+    Evasion-space of Adversarial Attacks against Phishing Website Detectors
+    using Machine Learning." ACM DTRAP 5(2), Art. 16, 2024. doi:10.1145/3638253.
+17. G. Apruzzese, V. S. Subrahmanian. "Mitigating Adversarial Gray-Box Attacks
+    Against Phishing Detectors." IEEE TDSC 20(5), 2023.
+    doi:10.1109/TDSC.2022.3210029.
+18. F. Tramèr, D. Boneh. "Adversarial Training and Robustness for Multiple
+    Perturbations." NeurIPS 2019. arXiv:1904.13000.
+19. D. Kang, Y. Sun, D. Hendrycks, T. Brown, J. Steinhardt. "Testing Robustness
+    Against Unforeseen Adversaries." arXiv:1908.08016.
+20. F. Tramèr, N. Carlini, W. Brendel, A. Madry. "On Adaptive Attacks to
+    Adversarial Example Defenses." NeurIPS 2020. arXiv:2002.08347.
+21. N. Carlini et al. "On Evaluating Adversarial Robustness." 2019.
+    arXiv:1902.06705.
+22. D. Arp et al. "Dos and Don'ts of Machine Learning in Computer Security."
+    USENIX Security 2022. arXiv:2010.09470.
+23. F. Pendlebury, F. Pierazzi, R. Jordaney, J. Kinder, L. Cavallaro.
+    "TESSERACT: Eliminating Experimental Bias in Malware Classification across
+    Space and Time." USENIX Security 2019. arXiv:1807.07838.
+24. A. Prasad, S. Chandra. "PhiUSIIL Phishing URL (Website)" [Dataset]. UCI
+    Machine Learning Repository, 2024.
+    https://archive.ics.uci.edu/dataset/967/phiusiil+phishing+url+dataset.
+    doi:10.1016/j.cose.2023.103545.

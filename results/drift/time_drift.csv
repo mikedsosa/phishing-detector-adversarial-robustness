@@ -1,0 +1,21 @@
+model,period,n_phish,n_benign,detected,false_pos
+gbm_raw,"validation (training period, random rows)",22153,27673,21241,734
+gbm_raw,test 2025-09,4279,27413,2511,768
+gbm_raw,test 2025-10,53325,60717,48752,1873
+gbm_raw,test 2025-11,19195,2113,17759,66
+gbm_raw,test 2025-12,0,1017,0,85
+cnn_raw,"validation (training period, random rows)",22153,27673,21199,517
+cnn_raw,test 2025-09,4279,27413,3639,544
+cnn_raw,test 2025-10,53325,60717,49285,1335
+cnn_raw,test 2025-11,19195,2113,17890,49
+cnn_raw,test 2025-12,0,1017,0,90
+gbm_raw_at,"validation (training period, random rows)",22153,27673,21314,975
+gbm_raw_at,test 2025-09,4279,27413,2581,986
+gbm_raw_at,test 2025-10,53325,60717,49721,2388
+gbm_raw_at,test 2025-11,19195,2113,17852,83
+gbm_raw_at,test 2025-12,0,1017,0,83
+cnn_raw_at,"validation (training period, random rows)",22153,27673,21597,1169
+cnn_raw_at,test 2025-09,4279,27413,3815,1233
+cnn_raw_at,test 2025-10,53325,60717,51127,2882
+cnn_raw_at,test 2025-11,19195,2113,18491,107
+cnn_raw_at,test 2025-12,0,1017,0,159

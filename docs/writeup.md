@@ -25,7 +25,7 @@ that rule, so making a phishing URL look like a homepage was enough.
 ## Second dataset: fairer, and the attack got stronger
 
 So I added PhreshPhish, a 2025 dataset (CC BY 4.0) whose legitimate URLs look
-like real browsing: 92.6% of them have a path. It also ships a time-based
+like real browsing: 92.5% of them have a path. It also ships a time-based
 split, so the test URLs are newer than anything in training. The homepage rule
 falls to 0.61 F1 there. PhreshPhish has a smaller quirk of its own: legitimate
 URLs almost never carry a query string. That rule alone has 0.997 precision
@@ -61,7 +61,9 @@ idea of dressing a URL up.
 ## What held up
 
 Models that only look at the registrable domain can't be evaded under these
-rules at all, because nothing the attacker changes reaches them. They pay for
+rules at all, because nothing the attacker changes reaches them, although
+wrapping the URL in a link shortener, which is outside our threat model, still
+evades the domain-only GBM about 24% of the time. They pay for
 it in accuracy: 0.817 and 0.846 F1 on PhreshPhish. When the attacker can only
 append a parameter or fragment, which is roughly the position of someone using
 a compromised site they don't fully control, evasion stayed at 1.2% or lower in every run.

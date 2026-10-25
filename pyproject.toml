@@ -9,7 +9,7 @@ description = "Adversarial robustness of ML phishing URL detectors under realist
 readme = "README.md"
 license = "MIT"
 authors = [{ name = "mikedsosa" }]
-requires-python = ">=3.11"
+requires-python = ">=3.12"  # results were produced with 3.12; CI and Docker use 3.12
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -20,7 +20,7 @@ pythonpath = ["src"]
 
 [tool.ruff]
 line-length = 120
-target-version = "py311"
+target-version = "py312"
 src = ["src", "tests", "scripts"]
 extend-exclude = [".venv"]
 

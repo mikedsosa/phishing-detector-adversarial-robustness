@@ -6,6 +6,7 @@ License: Creative Commons Attribution 4.0 International (CC BY 4.0)
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import sys
 import urllib.request
@@ -39,6 +40,7 @@ def verify(path: Path) -> None:
 
 
 def main() -> None:
+    argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter).parse_args()
     RAW.mkdir(parents=True, exist_ok=True)
     if CSV.exists() and sha256(CSV) == SHA256[CSV.name]:
         print(f"OK  {CSV} already present")

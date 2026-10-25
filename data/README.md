@@ -47,7 +47,7 @@ labels are dropped, and so are exact duplicates.
 
 ### Known dataset artifact (important)
 
-Every legitimate URL in PhiUSIIL has the form `https://www.<domain>`: HTTPS,
+99.97% of legitimate URLs in PhiUSIIL have the form `https://www.<domain>`: HTTPS,
 a `www` label, and no path or query. Phishing URLs are far more varied (see
 `results/RESULTS.md`, "Dataset structure"). A model trained on this data can
 therefore score highly by learning URL *format*, and that is exactly what our
