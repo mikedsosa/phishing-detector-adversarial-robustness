@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 import numpy as np
@@ -20,7 +21,6 @@ from phishadv.metrics import detection_metrics, wilson_interval
 
 seed = int(sys.argv[1]) if len(sys.argv) > 1 else 42
 cfg = CONFIGS["full-grouped"]
-from dataclasses import replace  # noqa: E402
 cfg = replace(cfg, seed=seed)
 out = Path(f"results/phiusiil-grouped-gbm-preview/seed{seed}")
 out.mkdir(parents=True, exist_ok=True)
