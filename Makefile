@@ -1,7 +1,7 @@
 PY ?= python
 export PYTHONPATH := src
 
-.PHONY: install data reproduce reproduce-main seeds aggregate smoke test lint scan models demo app docker clean
+.PHONY: install data reproduce reproduce-main seeds aggregate round2 smoke test lint scan models demo demo-sample app docker clean
 
 install:            ## install pinned dependencies
 	$(PY) -m pip install -r requirements-dev.txt
@@ -25,6 +25,15 @@ seeds: data         ## seeds 43 and 44 on both datasets -> results/seeds/
 aggregate:          ## cross-seed / cross-dataset tables and headline chart
 	$(PY) -m phishadv.aggregate
 
+round2:             ## domain-grouped PhiUSIIL runs, round-2 defenses, drift, operating point, hero figure (several hours)
+	scripts/run_round2.sh
+	scripts/run_defenses.sh phresh 42 43 44
+	$(PY) -m phishadv.aggregate
+	$(PY) -m phishadv.drift
+	$(PY) -m phishadv.operating --dataset phreshphish
+	$(PY) -m phishadv.operating --dataset phiusiil-grouped
+	$(PY) -m phishadv.defense_report
+
 smoke:              ## fast end-to-end runs on the bundled 1,500-URL samples -> results-smoke/
 	$(PY) -m phishadv.experiment --config smoke
 	$(PY) -m phishadv.experiment --config smoke-phresh
@@ -41,6 +50,10 @@ scan:               ## secret scan (must exit 0 before every push)
 models:             ## train + save demo models only (PhreshPhish), without the full experiment
 	$(PY) scripts/download_phreshphish.py
 	$(PY) -m phishadv train --dataset phreshphish --out models/phreshphish
+
+demo-sample:        ## offline quickstart: train small models on the bundled sample, score one URL
+	$(PY) -m phishadv train --dataset sample --out results-smoke/models
+	$(PY) -m phishadv score 'http://secure-login.example-account.xyz/verify.php?id=1' --models-dir results-smoke/models
 
 demo:               ## score one URL: make demo URL='http://example.com/login'
 	$(PY) -m phishadv score "$(URL)" --models-dir models/phreshphish
