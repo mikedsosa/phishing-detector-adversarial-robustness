@@ -19,7 +19,8 @@ import pandas as pd  # noqa: E402
 from .metrics import wilson_interval  # noqa: E402
 from .report import ATTACK_LABELS, DATASET_LABELS, LABELS  # noqa: E402
 
-RUNS = {"phiusiil": ("results", "full"), "phreshphish": ("results/phreshphish", "phresh")}
+RUNS = {"phiusiil": ("results", "full"), "phreshphish": ("results/phreshphish", "phresh"),
+        "phiusiil-grouped": ("results/phiusiil-grouped", "full-grouped")}
 KEY_MODELS = ["gbm_raw", "cnn_raw", "gbm_raw_at", "cnn_raw_at", "gbm_canon", "cnn_canon", "gbm_canon_at"]
 KEY_ATTACKS = ["greedy_blackbox", "greedy_heldout", "beam_extended", "hybrid_whitebox", "greedy_append_only"]
 
