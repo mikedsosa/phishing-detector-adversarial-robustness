@@ -88,7 +88,9 @@ intervals on evasions pooled over seeds.
    flags phishing with 99.7% precision.
 4. **PhiUSIIL's random split leaks domains.** 38.6% of phishing test URLs
    (38.6–38.7% across seeds) share a registrable domain with a phishing
-   training URL. <!-- ROUND2-GROUPED-FINDING -->
+   training URL. Re-running on a split grouped by domain leaves the
+   GBM's results within sampling error (greedy evasion 61.7% vs. 63.5%), so
+   the leak is not what makes PhiUSIIL easy.
 5. **Models don't carry over between datasets or months.** PhiUSIIL-trained
    models flag essentially all of PhreshPhish's legitimate URLs, and
    the PhreshPhish GBM's phishing recall falls from 95.9% on validation data to
@@ -120,7 +122,37 @@ caught-under-attack figure above as well.
 Adversarial training raises the false-positive rate: for the CNN from 2.2% to
 4.8% on seed 42 (2.4–4.8% across seeds), for the GBM from 3.1% to 3.9%.
 
-<!-- ROUND2-PHIUSIIL -->
+### PhiUSIIL: random split vs. domain-grouped split
+
+PhiUSIIL's random split leaks domains: 38.6% of phishing test URLs (seed 42;
+38.6–38.7% across seeds) share a registrable domain with a phishing training
+URL, against about 2.3% of legitimate ones. Round 2 adds a 70/10/20 split
+grouped by registrable domain, so no domain appears in more than one split.
+For the GBM it changes little: clean scores, greedy and adversarially
+trained results stay within sampling error, and beam-search evasion rises by
+3 points (seeds 42–44, pooled 95% Wilson
+intervals, per-seed range; [`results/phiusiil-grouped-gbm-preview/SUMMARY.md`](results/phiusiil-grouped-gbm-preview/SUMMARY.md)):
+
+| | Random split | Domain-grouped split |
+|---|---|---|
+| GBM clean F1 (FPR) | 0.9978 (0.04%) | 0.9977 (0.05%) |
+| GBM greedy, ≤10 edits | 63.5% [61.8, 65.2] (61.7–64.5) | 61.7% [60.0, 63.5] (58.8–65.5) |
+| GBM beam, ≤20 | 79.8% [78.3, 81.2] (77.4–81.2) | 82.8% [81.4, 84.1] (78.8–84.9) |
+| GBM + adv. training, greedy | 34.3% [32.6, 36.0] (32.7–35.8) | 34.8% [33.1, 36.6] (33.9–35.4) |
+| GBM + adv. training, beam | 41.2% [39.4, 43.0] (38.3–43.2) | 41.4% [39.7, 43.2] (39.0–43.6) |
+
+For the GBM, the leak isn't what makes PhiUSIIL easy; the bare-homepage
+format shortcut is. <!-- ROUND2-GROUPED-CNN -->
+
+Round-1 random-split PhiUSIIL table, seeds 42–44 (full results in
+[`results/SEEDS.md`](results/SEEDS.md)):
+
+| | GBM | Char-CNN | GBM + adv. training | Char-CNN + adv. training |
+|---|---|---|---|---|
+| Clean test F1 | 0.9978 | 0.9980 | 0.9960 | 0.9966 |
+| Greedy, ≤10 edits | 63.5% [61.8, 65.2] | 57.9% [56.1, 59.6] (50.6–63.0) | 34.3% [32.6, 36.0] | 29.8% [28.2, 31.5] |
+| Held-out edits | ≤0.2% | ≤0.2% | ≤0.2% | ≤0.2% |
+| Beam, ≤20 | 79.8% [78.3, 81.2] | 82.7% [81.3, 84.0] | 41.2% [39.4, 43.0] | 41.2% [39.4, 43.0] |
 
 ### Drift
 
