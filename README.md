@@ -240,6 +240,29 @@ each results folder.
 
 ![Evasion vs. perturbation budget (PhreshPhish, seed 42)](results/phreshphish/evasion_vs_perturbations.png)
 
+## Related work
+
+Full references are in [`docs/paper.md`](docs/paper.md#references). The
+closest prior work is Sabir, Gaire & Abuadbba, "Reliability and Robustness
+analysis of Machine Learning based Phishing URL Detectors" (IEEE TDSC 2022,
+doi:10.1109/TDSC.2022.3218043), whose URLBUG attack shows the same weakness
+to cheap URL edits. The feature-space vs. problem-space framing comes from
+Pierazzi et al. (IEEE S&P 2020, doi:10.1109/SP40000.2020.00073) and, for
+phishing, SpacePhish (ACSAC 2022, doi:10.1145/3564625.3567980) and
+Multi-SpacePhish (ACM DTRAP 2024, doi:10.1145/3638253). Earlier URL-evasion
+work includes Shirazi et al. (DBSec 2019), AlEroud & Karabatis (IWSPA 2020)
+and DeepPhish: A. Correa Bahnsen, I. Torroledo, L. D. Camacho and
+S. Villegas, "DeepPhish: Simulating Malicious AI," an author-hosted preprint
+presented as a talk at APWG eCrime 2018 and Black Hat Europe 2018
+([PDF](https://albahnsen.wordpress.com/wp-content/uploads/2018/05/deepphish-simulating-malicious-ai_submitted.pdf)).
+We found no peer-reviewed version of DeepPhish, so we cite it as a preprint
+and talk. It trains an LSTM to generate phishing URLs that slip past an ML
+detector. For defenses and evaluation practice we follow Tramèr & Boneh
+(NeurIPS 2019) and Kang et al. (arXiv:1908.08016) on robustness to unseen
+perturbations, Tramèr et al. (NeurIPS 2020) and Carlini et al.
+(arXiv:1902.06705) on adaptive attacks, and Arp et al. (USENIX Security
+2022) and TESSERACT (USENIX Security 2019) on pitfalls in security ML.
+
 ## How it works
 
 ```mermaid

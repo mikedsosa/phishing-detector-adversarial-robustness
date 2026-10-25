@@ -66,8 +66,8 @@ SpacePhish [7] contrasts feature-space and problem-space evasion of ML
 phishing-website detectors. Earlier work studied adversarial sampling against
 phishing classifiers [8] and adversarial attacks on URL-based phishing
 detectors [9]. DeepPhish [25] used an LSTM to generate phishing URLs that
-evade an ML detector; it is an author-hosted preprint and conference talk,
-not a peer-reviewed paper. The closest prior work is Sabir et al. [15], whose URLBUG
+evade an ML detector; it is an author-hosted preprint presented as a
+talk, and we found no peer-reviewed version. The closest prior work is Sabir et al. [15], whose URLBUG
 attack on 50 URL detectors cut median MCC from 0.92 to 0.02; our results
 confirm that cheap problem-space URL edits work, on newer data. Multi-SpacePhish
 [16] extends SpacePhish, and Apruzzese & Subrahmanian [17] propose a
@@ -823,6 +823,7 @@ deployed anywhere.
     https://archive.ics.uci.edu/dataset/967/phiusiil+phishing+url+dataset.
     doi:10.1016/j.cose.2023.103545.
 25. A. Correa Bahnsen, I. Torroledo, L. D. Camacho, S. Villegas. "DeepPhish:
-    Simulating Malicious AI." Author-hosted preprint, 2018, and talks at APWG
-    eCrime 2018 and Black Hat Europe 2018. **Not peer-reviewed.**
+    Simulating Malicious AI." Author-hosted preprint, 2018, presented as
+    talks at APWG eCrime 2018 and Black Hat Europe 2018. We found no
+    peer-reviewed version.
     https://albahnsen.wordpress.com/wp-content/uploads/2018/05/deepphish-simulating-malicious-ai_submitted.pdf
