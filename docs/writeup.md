@@ -8,7 +8,11 @@ the attacker doesn't have to buy anything new.
 
 The detectors are a gradient-boosted tree model (GBM) on 30 hand-built URL
 features and a small character-level CNN. Both only see the URL string. Every
-number below comes from the runs saved in the repo's `results/` folder.
+number below comes from the runs saved in the repo's `results/` folder. They
+are single-run (seed 42) point estimates unless I say otherwise; the
+[paper](paper.md) has the 95% intervals and the three-seed ranges. Evasion
+rates count only the phishing URLs a model caught before the attack, so each
+model's denominator is a little different.
 
 ## First dataset: high scores for the wrong reason
 
@@ -44,7 +48,10 @@ paths, a phishing URL has more ways to look normal, not fewer.
 Adversarial training here means: attack the model on training URLs, add the
 results to the training data labelled as phishing, retrain, and repeat once.
 On PhiUSIIL it cut greedy evasion to 32.7% (GBM) and 28.9% (CNN). On
-PhreshPhish it cut it to 34.7% and 17.6%.
+PhreshPhish it cut it to 34.7% and 17.6%. It also cost false positives on
+PhreshPhish: the GBM's rate went from 3.1% to 3.9%, and the CNN's from 2.2%
+to 4.8%. The GBM's rise showed up on all three seeds; the CNN's only on
+seed 42.
 
 That only measures the defense against the attack it was trained on. So I
 added two attacks it never saw. One is the greedy attack restricted to a
@@ -82,7 +89,7 @@ CNN's greedy evasion ranged from 50.6% to 63.0%.
 ## Round 2: checking my own work
 
 A review pointed out that PhiUSIIL's random split leaks domains: 38.6% of
-phishing test URLs share a registrable domain with a phishing training URL.
+phishing test URLs (averaged over three seeds) share a registrable domain with a phishing training URL.
 I re-split by domain. For the GBM the numbers barely moved (greedy evasion
 61.7% vs. 63.5% over three seeds), so the shortcut that makes PhiUSIIL easy
 is the homepage format, not the leak.

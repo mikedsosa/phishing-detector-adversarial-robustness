@@ -42,15 +42,18 @@ From [`results/phreshphish/clean_metrics.csv`](results/phreshphish/clean_metrics
 | `cnn_raw_at` | 0.9437 | 0.9562 | 0.9499 | 0.9904 | 0.0480 |
 
 A false-positive rate of 2–5% is far too high for blocking real traffic.
-Adversarial training raises it: `cnn_raw_at` flags 4.8% of legitimate URLs
-against 2.2% for `cnn_raw` on seed 42 (2.4–4.8% vs. 2.2–3.1% across seeds
-42–44), and `gbm_raw_at` 3.9% against 3.1%.
+Adversarial training raises it on seed 42: `cnn_raw_at` flags 4.8% of
+legitimate URLs against 2.2% for `cnn_raw`, and `gbm_raw_at` 3.9% against
+3.1%. The GBM's rise repeats on seeds 43 and 44; the CNN's does not
+(`cnn_raw_at` 2.3% on both, vs. 2.4% and 3.1% for `cnn_raw`).
 
 ## Robustness (seed 42, 1,000 phishing test URLs)
 
 Evasion rate among URLs each model flagged before the attack, from
 [`results/phreshphish/robustness.csv`](results/phreshphish/robustness.csv).
-Brackets are 95% Wilson intervals.
+Brackets are 95% Wilson intervals. The denominators differ by model (910
+`gbm_raw`, 931 `cnn_raw`, 922 `gbm_raw_at`, 962 `cnn_raw_at` of the 1,000
+sampled phishing URLs).
 
 | Model | Greedy, budget 10 | Greedy, held-out edits only | Beam search, all edits, budget 20 |
 |---|---|---|---|

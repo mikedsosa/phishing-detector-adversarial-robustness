@@ -58,8 +58,9 @@ datasets (`make data` downloads about 36 MB) and several CPU hours; see
 * **Dataset artifacts.** 99.97% of PhiUSIIL's legitimate URLs are bare
   `https://www.<domain>` homepages, and PhreshPhish stripped benign query
   strings for privacy. Both are shortcuts a model can learn. PhiUSIIL's random
-  split also puts 38.6% of phishing test URLs on a registrable domain already
-  seen in phishing training data (seed 42), so we add a **domain-grouped split**.
+  split also puts 38.6% of phishing test URLs (mean of seeds 42–44; 38.5–38.7%
+  per seed) on a registrable domain already seen in phishing training data, so
+  we add a **domain-grouped split**.
 * **Seed instability.** On PhiUSIIL (random split) the baseline CNN's greedy
   evasion ranges from 50.6% to 63.0% across seeds 42–44. Three seeds show
   spread; they are not a variance study.
@@ -82,14 +83,14 @@ intervals on evasions pooled over seeds.
 2. **Adversarial training mostly teaches the model the attacker it saw.** On
    PhreshPhish it cuts greedy evasion to 36.7% (GBM) and 22.9% (CNN). Against
    edit types left out of training it helps less (39.5% and 62.1%), a wider
-   beam search still gets through 72.5% and 98.7% of the time, and the
-   false-positive rate goes up.
+   beam search still gets through 72.5% and 98.7% of the time, and the GBM's
+   false-positive rate goes up on every seed (the CNN's only on seed 42).
 3. **Both benchmarks have shortcuts.** On PhiUSIIL a one-line "is it a bare
    `https://www.` homepage" rule scores 0.9948 F1. On PhreshPhish, benign
    URLs had their query strings stripped for privacy, so "has a query string"
    flags phishing with 99.7% precision.
 4. **PhiUSIIL's random split leaks domains.** 38.6% of phishing test URLs
-   (38.6–38.7% across seeds) share a registrable domain with a phishing
+   (mean of seeds 42–44; 38.5–38.7% per seed) share a registrable domain with a phishing
    training URL. Re-running on a split grouped by domain leaves the
    GBM's results within sampling error (greedy evasion 61.7% vs. 63.5%), so
    the leak is not what makes PhiUSIIL easy.
@@ -109,8 +110,12 @@ intervals on evasions pooled over seeds.
 Evasion rate = share of the phishing URLs a model flags at p ≥ 0.5 that the
 attack pushes below 0.5. Cells: mean over seeds, pooled 95% Wilson interval
 [brackets] and per-seed range. Denominators are the initially flagged URLs,
-which differ by model (about 2,700–2,830 pooled), so compare with the
-caught-under-attack figure above as well.
+which differ by model (2,729–2,834 pooled over the three seeds for these four
+models; on seed 42 alone, 910 for the GBM vs. 962 for the CNN + adv.
+training), so a lower evasion rate can partly reflect a model flagging more
+URLs to begin with. The hero figure above uses the same 1,000-URL denominator
+for every model and is the fairer comparison. Clean F1 and FPR cells show the
+mean and per-seed range; we don't compute intervals for them (test n = 168,059).
 
 | | GBM | Char-CNN | GBM + adv. training | Char-CNN + adv. training |
 |---|---|---|---|---|
@@ -121,14 +126,17 @@ caught-under-attack figure above as well.
 | Beam search, all 19 edits, ≤20 | 96.1% [95.3, 96.7] (95.4–96.9) | 99.96% [99.8, 99.99] (99.9–100) | 72.5% [70.8, 74.1] (70.0–75.0) | 98.7% [98.2, 99.1] (97.6–99.4) |
 | Random edits, label-only, ≤10 | 27.0% [25.4, 28.7] (26.0–28.9) | 25.9% [24.3, 27.6] (20.4–28.9) | 11.8% [10.6, 13.0] (10.7–13.6) | 7.9% [6.9, 8.9] (4.6–10.1) |
 
-Adversarial training raises the false-positive rate: for the CNN from 2.2% to
-4.8% on seed 42 (2.4–4.8% across seeds), for the GBM from 3.1% to 3.9%.
+Adversarial training raises the GBM's false-positive rate on every seed
+(3.1% to 3.9% on seed 42; 3.84–3.88% vs. 2.99–3.12% across seeds). For the CNN
+it rose from 2.2% to 4.8% on seed 42, but not on seeds 43 and 44 (2.3% for
+the adversarially trained CNN vs. 2.4% and 3.1% for the baseline), so the
+CNN's FPR cost is not consistent across seeds.
 
 ### PhiUSIIL: random split vs. domain-grouped split
 
-PhiUSIIL's random split leaks domains: 38.6% of phishing test URLs (seed 42;
-38.6–38.7% across seeds) share a registrable domain with a phishing training
-URL, against about 2.3% of legitimate ones ([`results/domain_leakage.csv`](results/domain_leakage.csv)). Round 2 adds a 70/10/20 split
+PhiUSIIL's random split leaks domains: 38.6% of phishing test URLs (mean of
+seeds 42–44; 38.5–38.7% per seed) share a registrable domain with a phishing
+training URL, against about 2.3% (2.3–2.4%) of legitimate ones ([`results/domain_leakage.csv`](results/domain_leakage.csv)). Round 2 adds a 70/10/20 split
 grouped by registrable domain, so no domain appears in more than one split.
 For the GBM it changes little: clean scores, greedy and adversarially
 trained results stay within sampling error, and beam-search evasion rises by
@@ -143,18 +151,24 @@ intervals, per-seed range; [`results/phiusiil-grouped-gbm-preview/SUMMARY.md`](r
 | GBM + adv. training, greedy | 34.3% [32.6, 36.0] (32.7–35.8) | 34.8% [33.1, 36.6] (33.9–35.4) |
 | GBM + adv. training, beam | 41.2% [39.4, 43.0] (38.3–43.2) | 41.4% [39.7, 43.2] (39.0–43.6) |
 
+Clean F1 (FPR) is the mean over seeds, without an interval. Evasion
+denominators are 2,989–2,992 initially flagged URLs pooled over three seeds
+in every cell.
+
 For the GBM, the leak isn't what makes PhiUSIIL easy; the bare-homepage
 format shortcut is. <!-- ROUND2-GROUPED-CNN -->
 
 Round-1 random-split PhiUSIIL table, seeds 42–44 (full results in
-[`results/SEEDS.md`](results/SEEDS.md)):
+[`results/SEEDS.md`](results/SEEDS.md)). Same cell format as the PhreshPhish
+table; denominators are 2,989–2,993 flagged URLs pooled over seeds for each
+model:
 
 | | GBM | Char-CNN | GBM + adv. training | Char-CNN + adv. training |
 |---|---|---|---|---|
-| Clean test F1 | 0.9978 | 0.9980 | 0.9960 | 0.9966 |
-| Greedy, ≤10 edits | 63.5% [61.8, 65.2] | 57.9% [56.1, 59.6] (50.6–63.0) | 34.3% [32.6, 36.0] | 29.8% [28.2, 31.5] |
-| Held-out edits | ≤0.2% | ≤0.2% | ≤0.2% | ≤0.2% |
-| Beam, ≤20 | 79.8% [78.3, 81.2] | 82.7% [81.3, 84.0] | 41.2% [39.4, 43.0] | 41.2% [39.4, 43.0] |
+| Clean test F1 | 0.9978 (0.9977–0.9980) | 0.9980 (0.9980–0.9981) | 0.9960 (0.9957–0.9961) | 0.9966 (0.9961–0.9971) |
+| Greedy, ≤10 edits | 63.5% [61.8, 65.2] (61.7–64.5) | 57.9% [56.1, 59.6] (50.6–63.0) | 34.3% [32.6, 36.0] (32.7–35.8) | 29.8% [28.2, 31.5] (28.9–30.9) |
+| Held-out edits, ≤10 | 0.1% [0.0, 0.3] (0.0–0.2) | 0.0% [0.0, 0.1] (0.0–0.0) | 0.0% [0.0, 0.1] (0.0–0.0) | 0.0% [0.0, 0.1] (0.0–0.0) |
+| Beam, ≤20 | 79.8% [78.3, 81.2] (77.4–81.2) | 82.7% [81.3, 84.0] (79.7–84.4) | 41.2% [39.4, 43.0] (38.3–43.2) | 41.2% [39.4, 43.0] (37.4–44.3) |
 
 ### Drift
 
@@ -179,7 +193,9 @@ between a 5% and a 0.05% base rate.
 
 A lower threshold doesn't help against the attacks. Choosing the threshold on
 validation data for at most 1% or 0.1% FPR and rerunning the attacks there
-(95% Wilson intervals; denominators are the URLs flagged at that threshold):
+(95% Wilson intervals; denominators are the URLs flagged at that threshold,
+so they shrink as the threshold rises). This is a single-seed (42) analysis;
+test FPR and recall are point estimates on the full test split:
 
 | Model | Target val. FPR | Test FPR | Test recall | Greedy | Held-out | Beam |
 |---|---|---|---|---|---|---|
@@ -199,7 +215,9 @@ only has to push a score below a higher bar, so evasion goes up. Full tables:
 
 The greedy attack needs few queries on PhreshPhish. With at most 50 score
 queries per URL it already evades 81.7% (GBM, 79.2–83.5% across seeds) and
-90.8% (CNN, 86.7–93.1%) of flagged URLs; with 10 queries, 17.0% and 18.1%.
+90.8% (CNN, 86.7–93.1%) of flagged URLs; with 10 queries, 17.0% (16.1–18.4%)
+and 18.1% (15.7–19.9%). These are means of the per-seed rates; we don't
+compute pooled intervals for the query curves.
 An attacker who only sees the verdict, never the score, and applies random
 valid edits until the URL passes still evades 27.0% (GBM) and 25.9% (CNN)
 within 10 edits (table above). Per-budget curves: `evasion_vs_queries.csv` in

@@ -20,6 +20,12 @@ scripts fetch them into `data/raw/` (git-ignored) and verify checksums.
 > incremental learning. *Computers & Security*, 136, 103545.
 > https://doi.org/10.1016/j.cose.2023.103545
 
+Dataset citation (UCI):
+
+> Prasad, A. & Chandra, S. (2024). PhiUSIIL Phishing URL (Website)
+> [Dataset]. UCI Machine Learning Repository.
+> https://doi.org/10.1016/j.cose.2023.103545
+
 ### Download
 
 ```bash
@@ -58,7 +64,8 @@ cheapest attacks exploit. See `docs/paper.md`.
 `tests/fixtures/phiusiil_sample.csv` holds 1,500 rows (750 per class, random
 seed 42) of the `URL` and `label` columns. It is redistributed under CC BY 4.0
 with the attribution above, so CI can run without downloading the dataset.
-**These are real phishing URLs. Don't visit them.**
+**These are real phishing URLs. Don't visit them.** License, attribution and warning
+notes are in [`tests/fixtures/README.md`](../tests/fixtures/README.md).
 
 ## 2. PhreshPhish
 
@@ -116,4 +123,5 @@ string" is therefore a near-perfect-precision rule here. We report it as the
 `tests/fixtures/phreshphish_sample.csv` holds 1,500 rows (600 per class from
 train, 150 per class from test, seed 42) with `sha256`, `url`, `label`,
 `split` and `date`. It is redistributed under CC BY 4.0 with the attribution
-above so CI runs offline. **These are real phishing URLs. Don't visit them.**
+above so CI runs offline. **These are real phishing URLs. Don't visit them.** License, attribution and warning
+notes are in [`tests/fixtures/README.md`](../tests/fixtures/README.md).

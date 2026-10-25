@@ -2,7 +2,7 @@
 
 > **Warning: these files contain real, possibly still live, phishing URLs.
 > Don't visit, resolve or share them.** The code in this repo only treats
-> them as strings.
+> them as strings. They are here for research and for testing this code only.
 
 | File | Source | License |
 |---|---|---|

@@ -16,7 +16,10 @@ URL-only phishing detectors look near-perfect on public benchmarks. We ask how
 much of that accuracy survives an attacker who makes only changes they could
 really make to a live phishing URL: switching to HTTPS, adding or removing
 `www`, renaming paths, and similar edits, always keeping the registrable
-domain fixed. We train a scikit-learn gradient-boosted model on 30 lexical
+domain fixed. Adversarial URLs pass our syntax and domain-ownership checks,
+but we don't check that a rewritten URL still serves the phishing page (for
+example, dropping a query string may break a kit's tokens), and the main
+threat tier assumes the attacker runs their own server and DNS. We train a scikit-learn gradient-boosted model on 30 lexical
 features and a character-level CNN on two CC BY 4.0 datasets. On PhiUSIIL
 (235,370 URLs, random split) both reach about 0.998 F1, and a greedy
 black-box attack with at most 10 edits evades **61.7%** (GBM) and **63.0%**
@@ -62,7 +65,9 @@ instead use cheap, domain-specific tricks. For phishing specifically,
 SpacePhish [7] contrasts feature-space and problem-space evasion of ML
 phishing-website detectors. Earlier work studied adversarial sampling against
 phishing classifiers [8] and adversarial attacks on URL-based phishing
-detectors [9]. The closest prior work is Sabir et al. [15], whose URLBUG
+detectors [9]. DeepPhish [25] used an LSTM to generate phishing URLs that
+evade an ML detector; it is an author-hosted preprint and conference talk,
+not a peer-reviewed paper. The closest prior work is Sabir et al. [15], whose URLBUG
 attack on 50 URL detectors cut median MCC from 0.92 to 0.02; our results
 confirm that cheap problem-space URL edits work, on newer data. Multi-SpacePhish
 [16] extends SpacePhish, and Apruzzese & Subrahmanian [17] propose a
@@ -318,29 +323,32 @@ signals that generalize.
 
 ### 4.2 PhiUSIIL: robustness (1,000 phishing test URLs, budget 10)
 
-| Model | Attack | Detected before | Evasion rate | Detection under attack | Median steps |
+| Model | Attack | Detected before | Evasion rate [95% Wilson CI] | Detection under attack | Median steps |
 |---|---|---|---|---|---|
-| GBM (baseline) | Greedy black-box | 995 | **0.617** | 0.381 | 1 |
-| GBM (baseline) | Random | 995 | 0.154 | 0.842 | 3 |
-| GBM (baseline) | Greedy, append-only | 995 | 0.002 | 0.993 | 1 |
-| Char-CNN (baseline) | Greedy black-box | 994 | **0.630** | 0.368 | 1 |
-| Char-CNN (baseline) | Random | 994 | 0.158 | 0.837 | 3 |
-| Char-CNN (baseline) | Greedy, append-only | 994 | 0.000 | 0.994 | – |
-| Char-CNN (baseline) | HotFlip white-box | 994 | 0.026 | 0.968 | 7 |
-| Char-CNN (baseline) | **Hybrid white-box** | 994 | **0.710** | 0.288 | 2 |
-| GBM + adv. training | Greedy black-box | 996 | 0.327 | 0.670 | 1 |
-| Char-CNN + adv. training | Greedy black-box | 997 | 0.289 | 0.709 | 1 |
-| Char-CNN + adv. training | HotFlip white-box | 997 | 0.002 | 0.995 | 5 |
-| Char-CNN + adv. training | Hybrid white-box | 997 | 0.281 | 0.717 | 1 |
-| GBM + canonicalization | Greedy black-box | 781 | 0.165 | 0.652 | 1 |
-| Char-CNN + canonicalization | Greedy black-box | 810 | 0.141 | 0.696 | 1 |
-| GBM + canon. + adv. training | Greedy black-box | 779 | 0.105 | 0.697 | 1 |
-| GBM, domain-only | Greedy black-box | 644 | 0.000 | 0.644 | – |
-| Char-CNN, domain-only | Greedy black-box | 759 | 0.000 | 0.759 | – |
-| GBM, domain-only | Shortener wrap (out of scope) | 644 | 0.239 | 0.490 | 1 |
-| GBM (baseline) | Shortener wrap (out of scope) | 995 | 0.000 | 0.995 | – |
+| GBM (baseline) | Greedy black-box | 995 | **0.617** [0.586, 0.647] | 0.381 | 1 |
+| GBM (baseline) | Random | 995 | 0.154 [0.133, 0.178] | 0.842 | 3 |
+| GBM (baseline) | Greedy, append-only | 995 | 0.002 [0.001, 0.007] | 0.993 | 1 |
+| Char-CNN (baseline) | Greedy black-box | 994 | **0.630** [0.599, 0.659] | 0.368 | 1 |
+| Char-CNN (baseline) | Random | 994 | 0.158 [0.137, 0.182] | 0.837 | 3 |
+| Char-CNN (baseline) | Greedy, append-only | 994 | 0.000 [0.000, 0.004] | 0.994 | – |
+| Char-CNN (baseline) | HotFlip white-box | 994 | 0.026 [0.018, 0.038] | 0.968 | 7 |
+| Char-CNN (baseline) | **Hybrid white-box** | 994 | **0.710** [0.681, 0.738] | 0.288 | 2 |
+| GBM + adv. training | Greedy black-box | 996 | 0.327 [0.299, 0.357] | 0.670 | 1 |
+| Char-CNN + adv. training | Greedy black-box | 997 | 0.289 [0.262, 0.318] | 0.709 | 1 |
+| Char-CNN + adv. training | HotFlip white-box | 997 | 0.002 [0.001, 0.007] | 0.995 | 5 |
+| Char-CNN + adv. training | Hybrid white-box | 997 | 0.281 [0.254, 0.310] | 0.717 | 1 |
+| GBM + canonicalization | Greedy black-box | 781 | 0.165 [0.141, 0.193] | 0.652 | 1 |
+| Char-CNN + canonicalization | Greedy black-box | 810 | 0.141 [0.118, 0.166] | 0.696 | 1 |
+| GBM + canon. + adv. training | Greedy black-box | 779 | 0.105 [0.086, 0.129] | 0.697 | 1 |
+| GBM, domain-only | Greedy black-box | 644 | 0.000 [0.000, 0.006] | 0.644 | – |
+| Char-CNN, domain-only | Greedy black-box | 759 | 0.000 [0.000, 0.005] | 0.759 | – |
+| GBM, domain-only | Shortener wrap (out of scope) | 644 | 0.239 [0.208, 0.274] | 0.490 | 1 |
+| GBM (baseline) | Shortener wrap (out of scope) | 995 | 0.000 [0.000, 0.004] | 0.995 | – |
 
-The full table, covering every model × attack pair, is in
+Seed-42 point estimates with 95% Wilson intervals over the detected URLs.
+Evasion rates have different denominators ("Detected before": 644–997), so
+compare models on detection under attack, which shares the 1,000-URL
+denominator. The full table, covering every model × attack pair, is in
 [`results/RESULTS.md`](../results/RESULTS.md).
 
 ![Evasion vs. perturbation budget](../results/evasion_vs_perturbations.png)
@@ -417,21 +425,28 @@ phishing URLs rather than nearly all of them.
 | Query rule | 0.9972 | 0.2396 | 0.3863 | 0.6195 | 0.0006 |
 
 Adversarial training slightly *raises* clean F1 here, but it also raises FPR
-(GBM 3.06% → 3.88%, CNN 2.21% → 4.80%).
+(GBM 3.06% → 3.88%, CNN 2.21% → 4.80%, seed 42). The GBM's rise repeats on
+seeds 43 and 44 (2.99% → 3.84%, 3.12% → 3.88%); the CNN's does not (2.38% →
+2.35%, 3.13% → 2.35%), so the CNN's FPR cost is seed-dependent.
 
 **Robustness.**
 
 | Model | Detected before | Greedy (owner) | Held-out edits | Beam, extended | Append-only |
 |---|---|---|---|---|---|
-| GBM (baseline) | 910 | **0.832** [0.806, 0.855] | 0.482 [0.450, 0.515] | 0.959 [0.944, 0.970] | 0.007 |
-| Char-CNN (baseline) | 931 | **0.956** [0.941, 0.967] | 0.755 [0.726, 0.782] | 1.000 [0.996, 1.000] | 0.000 |
-| GBM + adv. training | 922 | 0.347 [0.317, 0.378] | 0.352 [0.322, 0.384] | 0.700 [0.669, 0.728] | 0.007 |
-| Char-CNN + adv. training | 962 | 0.176 [0.153, 0.201] | 0.551 [0.519, 0.582] | 0.976 [0.964, 0.984] | 0.000 |
-| GBM + canonicalization | 860 | 0.569 [0.535, 0.601] | 0.417 [0.385, 0.451] | 0.773 [0.744, 0.800] | 0.000 |
-| Char-CNN + canonicalization | 889 | 0.918 [0.898, 0.934] | 0.724 [0.694, 0.753] | 1.000 [0.996, 1.000] | 0.000 |
-| GBM + canon. + adv. training | 865 | 0.216 [0.190, 0.245] | 0.379 [0.347, 0.412] | 0.645 [0.613, 0.676] | 0.000 |
-| GBM, domain-only | 745 | 0.000 | – | – | 0.000 |
-| Char-CNN, domain-only | 764 | 0.000 | – | – | 0.000 |
+| GBM (baseline) | 910 | **0.832** [0.806, 0.855] | 0.482 [0.450, 0.515] | 0.959 [0.944, 0.970] | 0.007 [0.003, 0.014] |
+| Char-CNN (baseline) | 931 | **0.956** [0.941, 0.967] | 0.755 [0.726, 0.782] | 1.000 [0.996, 1.000] | 0.000 [0.000, 0.004] |
+| GBM + adv. training | 922 | 0.347 [0.317, 0.378] | 0.352 [0.322, 0.384] | 0.700 [0.669, 0.728] | 0.007 [0.003, 0.014] |
+| Char-CNN + adv. training | 962 | 0.176 [0.153, 0.201] | 0.551 [0.519, 0.582] | 0.976 [0.964, 0.984] | 0.000 [0.000, 0.004] |
+| GBM + canonicalization | 860 | 0.569 [0.535, 0.601] | 0.417 [0.385, 0.451] | 0.773 [0.744, 0.800] | 0.000 [0.000, 0.004] |
+| Char-CNN + canonicalization | 889 | 0.918 [0.898, 0.934] | 0.724 [0.694, 0.753] | 1.000 [0.996, 1.000] | 0.000 [0.000, 0.004] |
+| GBM + canon. + adv. training | 865 | 0.216 [0.190, 0.245] | 0.379 [0.347, 0.412] | 0.645 [0.613, 0.676] | 0.000 [0.000, 0.004] |
+| GBM, domain-only | 745 | 0.000 [0.000, 0.005] | – | – | 0.000 [0.000, 0.005] |
+| Char-CNN, domain-only | 764 | 0.000 [0.000, 0.005] | – | – | 0.000 [0.000, 0.005] |
+
+Evasion denominators are each model's detected URLs ("Detected before",
+745–962), so they differ across models: the adversarially trained CNN's
+0.176 is out of 962 flagged URLs, the baseline GBM's 0.832 out of 910.
+Detection under attack (§4.7) uses the same 1,000 URLs for every model.
 
 On the baseline CNN, HotFlip alone evades 0.565 [0.533, 0.596] and the
 hybrid white-box attack 0.977 [0.966, 0.985]. After adversarial training they
@@ -507,7 +522,9 @@ ones that carry over: F1 0.7651 (GBM) and 0.8350 (CNN), FPR 0.0952 and
 committed results include **seeds 42, 43 and 44 on both datasets** (six
 runs). Each cell below is the mean over the three seeds, the 95% Wilson
 interval on the evasions pooled over the seeds (sampling error only), and the
-per-seed min–max.
+per-seed min–max. Clean F1 is listed per seed without an interval.
+Pooled denominators (flagged URLs over three seeds) are 2,729–2,834 per model
+on PhreshPhish and 2,989–2,993 on PhiUSIIL.
 
 PhreshPhish, seeds 42–44:
 
@@ -547,7 +564,11 @@ reaches at most 0.012 (PhreshPhish GBM + adv. training, seed 43).
 ![Clean F1 vs. detection under greedy attack, PhreshPhish](../results/phreshphish/tradeoff.png)
 
 Clean F1, greedy evasion and detection under greedy attack, as GBM / CNN
-(seed 42):
+(seed 42 point estimates; the 95% Wilson intervals for each evasion rate are
+in §4.2 and §4.4 and the three-seed ranges in §4.6). Evasion is over each
+model's own detected URLs, so its denominator varies by model; detection
+under attack is over the same 1,000 sampled URLs and is the like-for-like
+column:
 
 | Defense | PhiUSIIL F1 | PhiUSIIL evasion | PhiUSIIL detection | PhreshPhish F1 | PhreshPhish evasion | PhreshPhish detection |
 |---|---|---|---|---|---|---|
@@ -559,7 +580,9 @@ Clean F1, greedy evasion and detection under greedy attack, as GBM / CNN
 
 * **Adversarial training** is cheap in clean F1 on both datasets, but it
   raises FPR (PhiUSIIL: 0.0004 → 0.0034 GBM, 0 → 0.0026 CNN; PhreshPhish:
-  0.0306 → 0.0388 GBM, 0.0221 → 0.0480 CNN). It roughly halves greedy
+  0.0306 → 0.0388 GBM, 0.0221 → 0.0480 CNN). On seeds 43 and 44 the
+  PhreshPhish CNN's FPR did not rise (0.0238 → 0.0235, 0.0313 → 0.0235),
+  while the GBM's did on every seed. It roughly halves greedy
   evasion on PhiUSIIL and cuts it by more on PhreshPhish. Against the
   stronger beam search it holds up on PhiUSIIL (0.383 / 0.374) but not on
   PhreshPhish (0.700 / 0.976), where held-out edits also get through
@@ -603,7 +626,9 @@ All attacks above see the model's score and get unlimited queries. Two
 cheaper attackers, on PhreshPhish, seeds 42–44
 ([`results/SEEDS.md`](../results/SEEDS.md), `evasion_vs_queries.csv`):
 
-* **Query budget.** The greedy attack evades 17.0% (GBM) and 18.1% (CNN) of
+* **Query budget.** Successful greedy attacks need a median of 1 (PhiUSIIL)
+  or 2 (PhreshPhish) edits, so the score-query assumption costs the attacker
+  little. The greedy attack evades 17.0% (GBM) and 18.1% (CNN) of
   flagged URLs within 10 score queries and 81.7% (per-seed 79.2–83.5%) and
   90.8% (86.7–93.1%) within 50.
 * **Label-only.** Applying random valid edits and checking only the verdict
@@ -614,9 +639,9 @@ cheaper attackers, on PhreshPhish, seeds 42–44
 
 ### 4.10 Domain leakage in PhiUSIIL's random split
 
-With the random split, 38.6% of phishing test URLs (38.6–38.7% across seeds
-42–44) share a registrable domain with a phishing training URL, against about
-2.3% of legitimate test URLs
+With the random split, 38.6% of phishing test URLs (mean of seeds 42–44;
+38.5–38.7% per seed) share a registrable domain with a phishing training URL, against about
+2.3% (2.3–2.4%) of legitimate test URLs
 ([`results/domain_leakage.csv`](../results/domain_leakage.csv)). (PhreshPhish's time split has some overlap too:
 17.4% of phishing and 58.1% of benign test URLs, seed 42; for benign URLs
 this is expected, since popular sites recur.) We added a domain-grouped
@@ -631,6 +656,10 @@ the registrable domain; zero overlap). For the GBM, seeds 42–44
 | GBM beam | 0.798 [0.783, 0.812] | 0.828 [0.814, 0.841] |
 | GBM + adv. training, greedy | 0.343 [0.326, 0.360] | 0.348 [0.331, 0.366] |
 | GBM + adv. training, beam | 0.412 [0.394, 0.430] | 0.414 [0.397, 0.432] |
+
+Cells are the mean over seeds with pooled 95% Wilson intervals; clean F1 and
+FPR are means without intervals. Denominators are 2,989–2,992 flagged URLs
+pooled over seeds in every cell.
 
 The leak barely moves the GBM's numbers; beam evasion is 3 points higher on
 the grouped split. The format shortcut (§4.1) dominates. <!-- ROUND2-PAPER-GROUPED-CNN -->
@@ -693,6 +722,21 @@ Stricter thresholds trade recall for false positives but make evasion easier.
   model. It is the most obvious next step.
 * **Validity isn't liveness.** We check syntax and ownership constraints, not
   whether each rewritten URL would still serve the kit.
+* **Two baselines only.** We test a lexical GBM and a character CNN. There is
+  no URLNet [10] or transformer model, no deployed commercial detector, and
+  no reimplementation of the gray-box defense of Apruzzese & Subrahmanian
+  [17]. We also built no attack aimed specifically at canonicalization.
+* **One source per dataset, and the domain definition matters.** Each
+  benchmark comes from a single collection pipeline. Many of PhreshPhish's
+  most common phishing domains are hosting platforms, and whether a tenant
+  subdomain counts as its own registrable domain depends on the Public
+  Suffix List's private section, which sets what the `owner` tier lets the
+  attacker change.
+* **No paired significance tests in the round-1 tables.** The Wilson
+  intervals are per model and per attack, not paired comparisons on the same
+  attacked URLs. Where two intervals overlap (for example, GBM greedy
+  evasion on PhiUSIIL's random vs. domain-grouped split, 0.635 [0.618, 0.652]
+  vs. 0.617 [0.600, 0.635]), read the difference as unresolved.
 
 ## 6. Ethics
 
@@ -778,3 +822,7 @@ deployed anywhere.
     Machine Learning Repository, 2024.
     https://archive.ics.uci.edu/dataset/967/phiusiil+phishing+url+dataset.
     doi:10.1016/j.cose.2023.103545.
+25. A. Correa Bahnsen, I. Torroledo, L. D. Camacho, S. Villegas. "DeepPhish:
+    Simulating Malicious AI." Author-hosted preprint, 2018, and talks at APWG
+    eCrime 2018 and Black Hat Europe 2018. **Not peer-reviewed.**
+    https://albahnsen.wordpress.com/wp-content/uploads/2018/05/deepphish-simulating-malicious-ai_submitted.pdf
