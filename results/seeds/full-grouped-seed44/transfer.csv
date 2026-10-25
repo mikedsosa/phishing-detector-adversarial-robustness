@@ -1,0 +1,17 @@
+source,target,n,target_evasion_rate
+gbm_raw,gbm_canon,586,0.39419795221843
+gbm_raw,gbm_domain,586,0.6348122866894198
+gbm_raw,cnn_raw,586,0.8617747440273038
+gbm_raw,cnn_canon,586,0.3651877133105802
+gbm_raw,cnn_domain,586,0.4180887372013652
+gbm_raw,gbm_raw_at,586,0.46075085324232085
+gbm_raw,cnn_raw_at,586,0.5494880546075085
+gbm_raw,gbm_canon_at,586,0.3873720136518771
+cnn_raw,gbm_raw,489,0.9100204498977505
+cnn_raw,gbm_canon,489,0.4723926380368098
+cnn_raw,gbm_domain,489,0.65439672801636
+cnn_raw,cnn_canon,489,0.44171779141104295
+cnn_raw,cnn_domain,489,0.4785276073619632
+cnn_raw,gbm_raw_at,489,0.5623721881390593
+cnn_raw,cnn_raw_at,489,0.6441717791411042
+cnn_raw,gbm_canon_at,489,0.4703476482617587

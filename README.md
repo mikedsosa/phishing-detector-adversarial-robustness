@@ -24,9 +24,9 @@ time-split PhreshPhish.
 
 *Share of 1,000 sampled phishing test URLs per seed that each model flags and
 still flags after the attack (same denominator for every model), pooled over
-seeds 42–44, 95% Wilson intervals. The PhiUSIIL panel uses the round-1 random
-split; GBM results on the domain-grouped split are within a few points (see
-below). Data: [`results/hero_data.csv`](results/hero_data.csv).*
+seeds 42–44, 95% Wilson intervals. The PhiUSIIL panel uses the domain-grouped
+split (no registrable domain in more than one split); random-split results are
+compared [below](#phiusiil-random-split-vs-domain-grouped-split). Data: [`results/hero_data.csv`](results/hero_data.csv).*
 
 ## Quickstart (about 10 minutes, offline after install)
 
@@ -92,8 +92,9 @@ intervals on evasions pooled over seeds.
 4. **PhiUSIIL's random split leaks domains.** 38.6% of phishing test URLs
    (mean of seeds 42–44; 38.5–38.7% per seed) share a registrable domain with a phishing
    training URL. Re-running on a split grouped by domain leaves the
-   GBM's results within sampling error (greedy evasion 61.7% vs. 63.5%), so
-   the leak is not what makes PhiUSIIL easy.
+   GBM's results within sampling error (greedy evasion 61.7% vs. 63.5%) and
+   the CNN's slightly lower (54.5% vs. 57.9%), so the leak is not what makes
+   PhiUSIIL easy.
 5. **Models don't carry over between datasets or months.** PhiUSIIL-trained
    models flag essentially all of PhreshPhish's legitimate URLs, and
    the PhreshPhish GBM's phishing recall falls from 95.9% on validation data to
@@ -156,12 +157,21 @@ denominators are 2,989–2,992 initially flagged URLs pooled over three seeds
 in every cell.
 
 For the GBM, the leak isn't what makes PhiUSIIL easy; the bare-homepage
-format shortcut is. <!-- ROUND2-GROUPED-CNN -->
+format shortcut is. The char-CNN points the same way (seeds 42–44, same
+cell format; [`results/SEEDS.md`](results/SEEDS.md)):
 
-> **TODO (round 2, not yet aggregated):** char-CNN results on the
-> domain-grouped split. The per-seed runs are in `results/phiusiil-grouped/`
-> and `results/seeds/full-grouped-seed43/`, `-seed44/`; fill this in from
-> `results/SEEDS.md` after `python -m phishadv.aggregate`. No numbers yet.
+| | Random split | Domain-grouped split |
+|---|---|---|
+| CNN clean F1 | 0.9980 (0.9980–0.9981) | 0.9978 (0.9973–0.9981) |
+| CNN greedy, ≤10 edits | 57.9% [56.1, 59.6] (50.6–63.0) | 54.5% [52.7, 56.3] (49.1–64.4) |
+| CNN beam, ≤20 | 82.7% [81.3, 84.0] (79.7–84.4) | 82.1% [80.6, 83.4] (77.5–86.6) |
+| CNN + adv. training, greedy | 29.8% [28.2, 31.5] (28.9–30.9) | 32.4% [30.8, 34.1] (29.5–35.2) |
+| CNN + adv. training, beam | 41.2% [39.4, 43.0] (37.4–44.3) | 46.9% [45.1, 48.7] (43.8–50.4) |
+
+The baseline CNN is no easier to evade on the grouped split, so the leak
+wasn't inflating its results. The adversarially trained CNN does somewhat
+worse there under beam search (46.9% vs. 41.2%, non-overlapping intervals),
+so for that defense the random split was slightly flattering.
 
 Round-1 random-split PhiUSIIL table, seeds 42–44 (full results in
 [`results/SEEDS.md`](results/SEEDS.md)). Same cell format as the PhreshPhish
@@ -216,6 +226,16 @@ A strict threshold flags fewer phishing URLs to begin with, and the attacker
 only has to push a score below a higher bar, so evasion goes up. Full tables:
 [`results/operating/phreshphish/OPERATING.md`](results/operating/phreshphish/OPERATING.md).
 
+PhiUSIIL's domain-grouped split (seed 42) looks different, because of the
+format shortcut. Precision at 90% recall stays at 100.0% even at a 0.05%
+base rate (average precision 0.995–0.997 for all four models), and the
+default threshold already gives test FPRs of 0.00–0.34%. The thresholds
+picked for 1% or 0.1% validation FPR are mostly *below* 0.5 there, so this
+isn't a stricter-threshold test; evasion stays in the same range or drops
+(baseline CNN greedy: 64.4% [61.4, 67.3] at t = 0.5, 41.3% [38.2, 44.4] at
+the 1% target, 49.7% [46.6, 52.8] at 0.1%). Full table:
+[`results/operating/phiusiil-grouped/OPERATING.md`](results/operating/phiusiil-grouped/OPERATING.md).
+
 ### Attacker knowledge: query budgets and label-only access
 
 The greedy attack needs few queries on PhreshPhish. With at most 50 score
@@ -228,14 +248,55 @@ valid edits until the URL passes still evades 27.0% (GBM) and 25.9% (CNN)
 within 10 edits (table above). Per-budget curves: `evasion_vs_queries.csv` in
 each results folder.
 
-<!-- ROUND2-DEFENSES -->
+### Round-2 defenses: mixed adversarial training and ensembles
 
-> **TODO (round 2, runs still going):** mixed adversarial training and
-> ensemble defenses, with paired McNemar tests against the baseline. The
-> PhreshPhish runs (seeds 42–44) are done; the domain-grouped PhiUSIIL runs
-> for seeds 43 and 44 are still training. Numbers go here, and
-> `results/defenses/DEFENSES.md` (linked above) is written, once
-> `python -m phishadv.defense_report` runs after they finish.
+Round 2 adds two defenses. *Mixed* adversarial training also adds
+beam-search trajectories (owner-tier edits only, so held-out edits stay held
+out) to each training round. The *ensemble* averages the GBM's and CNN's
+scores. Every model was retrained from scratch for these runs, so baseline
+numbers differ a little from the tables above.
+
+PhreshPhish, seeds 42–44. Cells are the share of the 1,000 sampled phishing
+URLs per seed that the model flags and still flags after the attack (same
+denominator for every model), pooled over seeds with 95% Wilson intervals.
+Clean FPR is the mean over seeds on the full test split:
+
+| Model | Clean FPR | No attack | Greedy, ≤10 | Held-out, ≤10 | Beam, ≤20 |
+|---|---|---|---|---|---|
+| GBM (baseline) | 3.1% | 91.0% | 13.7% [12.5, 15.0] | 46.1% [44.4, 47.9] | 3.6% [3.0, 4.3] |
+| GBM + adv. training | 3.9% | 92.0% | 58.2% [56.4, 60.0] | 55.6% [53.8, 57.4] | 25.3% [23.8, 26.9] |
+| GBM + mixed adv. training | 4.5% | 92.2% | 65.5% [63.7, 67.1] | 58.7% [56.9, 60.4] | 25.9% [24.4, 27.5] |
+| Char-CNN (baseline) | 2.7% | 93.6% | 3.9% [3.3, 4.7] | 25.2% [23.6, 26.8] | 0.0% [0.0, 0.1] |
+| Char-CNN + adv. training | 3.8% | 95.4% | 77.1% [75.6, 78.6] | 36.6% [34.9, 38.3] | 1.1% [0.8, 1.5] |
+| Char-CNN + mixed adv. training | 3.5% | 95.0% | 76.8% [75.3, 78.3] | 29.8% [28.2, 31.5] | 0.6% [0.4, 0.9] |
+| GBM+CNN ensemble (baseline) | 2.1% | 93.7% | 4.9% [4.2, 5.8] | 35.4% [33.7, 37.2] | 0.3% [0.2, 0.6] |
+| GBM+CNN ensemble + adv. training | 2.9% | 95.2% | 74.1% [72.5, 75.6] | 53.7% [51.9, 55.5] | 18.6% [17.2, 20.0] |
+| GBM+CNN ensemble + mixed adv. training | 2.9% | 95.2% | 76.7% [75.1, 78.1] | 52.5% [50.7, 54.2] | 15.2% [14.0, 16.5] |
+
+Paired comparisons are exact McNemar tests on the same attacked URLs, pooled
+over seeds:
+
+* **Mixed adversarial training helps the GBM against the attack it saw, not
+  against a stronger one.** Greedy: 65.5% vs. 58.2% caught (p = 1.5e-33);
+  held-out edits: 58.7% vs. 55.6% (p = 6.6e-11); beam: 25.9% vs. 25.3%
+  (p = 0.27). Clean FPR goes from 3.9% to 4.5%.
+* **For the CNN it doesn't help.** Greedy is unchanged (76.8% vs. 77.1%,
+  p = 0.64), and it catches fewer URLs under held-out edits (29.8% vs. 36.6%,
+  p = 1.7e-25) and beam search (0.6% vs. 1.1%, p = 0.00027).
+* **The ensemble doesn't beat its best member under attack.** Against beam
+  search the adversarially trained ensemble catches 18.6% vs. 25.3% for the
+  adversarially trained GBM alone (p = 1e-36); on held-out edits, 53.7% vs.
+  55.6% (p = 0.0021). It does have a lower clean FPR (2.9% vs. 3.9%).
+* **Nothing holds up to beam search on PhreshPhish.** The best defense,
+  GBM + mixed adversarial training, still lets about three in four flagged
+  URLs through.
+* **PhiUSIIL (domain-grouped split):** held-out edits evade essentially none (0.0%) of the
+  models, and mixed training gives small but significant gains under beam
+  search (GBM 60.7% vs. 58.4% caught, CNN 57.8% vs. 52.9%, ensemble 61.7% vs.
+  56.0%; all p < 1e-8), with clean FPRs of 0.2–0.7%.
+
+Full tables for both datasets and every paired test:
+[`results/defenses/DEFENSES.md`](results/defenses/DEFENSES.md).
 
 ### Other findings carried over from round 1
 

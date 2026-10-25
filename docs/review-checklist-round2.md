@@ -1,8 +1,8 @@
 # Round-2 review checklist
 
-Status of each item in the round-1 external review (commit c848f23). "Waiting"
-means the docs carry a marked TODO until the listed results exist; no numbers
-were filled in ahead of the results.
+Status of each item in the round-1 external review (commit c848f23). Every
+number in the docs comes from the generated results files; none were filled
+in ahead of the runs.
 
 ## 1. Prior work
 
@@ -40,12 +40,12 @@ were filled in ahead of the results.
 
 | Item | Status |
 |---|---|
-| 1. Domain-grouped PhiUSIIL split | GBM: done (README, paper §4.10). Char-CNN: **waiting** on aggregation of the grouped seeds (TODO at the ROUND2-GROUPED-CNN markers) |
-| 2. Base rate and low-FPR operating point | PhreshPhish: done (paper §4.11, README). PhiUSIIL grouped: **waiting** (TODO at ROUND2-PAPER) |
+| 1. Domain-grouped PhiUSIIL split | Done: GBM and char-CNN, seeds 42–44 (README, paper §4.10); hero figure now uses the grouped split |
+| 2. Base rate and low-FPR operating point | Done: PhreshPhish and PhiUSIIL grouped, seed 42 (paper §4.11, README) |
 | 3. Query budget / label-only | Done (paper §4.9, README) |
 | 4. Liveness and owner-tier assumption in abstract | Done |
 | 5. Baselines (URLNet, transformer, deployed detector, A&S defense) | Stated as limitations and future work (paper §5, README) |
 | 6. Adaptive attacks; AT as upper bound | Done (paper §1 and §5, README); LLM rewrites and canonicalization attack listed as not done |
-| 7. Paired tests between defenses | Limitation stated for round-1 tables. McNemar results: **waiting** on grouped PhiUSIIL defense runs (seeds 43, 44) and `phishadv.defense_report` (TODO at ROUND2-DEFENSES / ROUND2-PAPER) |
+| 7. Paired tests between defenses | Done: exact McNemar tests for the round-2 defenses, both datasets, seeds 42–44 (paper §4.12, README, `results/defenses/DEFENSES.md`); limitation kept for the other tables (paper §5) |
 | 8. Single source per dataset; PSL private section | Done (paper §5) |
 | 9. Reproducibility | Not applicable (verified good by the review) |

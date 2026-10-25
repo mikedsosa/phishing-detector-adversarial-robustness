@@ -92,7 +92,8 @@ A review pointed out that PhiUSIIL's random split leaks domains: 38.6% of
 phishing test URLs (averaged over three seeds) share a registrable domain with a phishing training URL.
 I re-split by domain. For the GBM the numbers barely moved (greedy evasion
 61.7% vs. 63.5% over three seeds), so the shortcut that makes PhiUSIIL easy
-is the homepage format, not the leak.
+is the homepage format, not the leak. The CNN's greedy evasion was a bit
+lower on the grouped split (54.5% vs. 57.9%).
 
 PhreshPhish's test set is later than its training set, so I broke it down by
 month. The GBM caught 95.9% of phishing on held-out training-period data but
@@ -104,6 +105,15 @@ a 0.1% false-positive rate raised greedy evasion of the GBM to 99.2%, because
 a stricter threshold is easier to slip under. And an attacker who only sees
 "blocked / not blocked" and tries random valid edits still got past about a
 quarter of detections within 10 edits.
+
+I also tried two more defenses: adversarial training that adds a stronger
+beam-search attacker, and averaging the GBM and CNN together. Paired tests
+on the same URLs showed the stronger training helped the GBM against the
+attack it trained on (65.5% vs. 58.2% of phishing still caught on
+PhreshPhish) but not against beam search (25.9% vs. 25.3%), and it didn't
+help the CNN at all. The ensemble wasn't better than its best member under
+attack. On PhreshPhish, no defense I built stops the beam search from
+getting about three in four flagged URLs through.
 
 ## What I'd take from this
 

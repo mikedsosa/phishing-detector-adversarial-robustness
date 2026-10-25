@@ -250,7 +250,10 @@ Each detector can read one of three *views* of the URL:
    intermediate and final URL from the attack trajectories (labelled
    phishing) to the training set, and retrain from scratch. For the CNN we
    also add hybrid white-box examples for half of the sampled URLs.
-   Variants: `gbm_raw_at`, `cnn_raw_at` and `gbm_canon_at`.
+   Variants: `gbm_raw_at`, `cnn_raw_at` and `gbm_canon_at`. Round 2 adds
+   *mixed* AT (`gbm_raw_mix`, `cnn_raw_mix`), which also adds owner-tier
+   beam-search trajectories each round, and score-averaging GBM+CNN
+   ensembles (§4.12).
 2. **Canonicalization:** train and test on the `canon` view, which removes
    features the attacker controls for free.
 3. **Domain-only:** train and test on the registrable domain only. This is
@@ -662,10 +665,21 @@ FPR are means without intervals. Denominators are 2,989–2,992 flagged URLs
 pooled over seeds in every cell.
 
 The leak barely moves the GBM's numbers; beam evasion is 3 points higher on
-the grouped split. The format shortcut (§4.1) dominates. <!-- ROUND2-PAPER-GROUPED-CNN -->
+the grouped split. The format shortcut (§4.1) dominates. The char-CNN, same
+cell format ([`results/SEEDS.md`](../results/SEEDS.md)):
 
-**TODO (round 2):** char-CNN rows for the grouped split, from
-`results/SEEDS.md` once the grouped seeds are aggregated. No numbers yet.
+| | Random split | Domain-grouped split |
+|---|---|---|
+| CNN clean F1 | 0.9980 | 0.9978 |
+| CNN greedy | 0.579 [0.561, 0.596] | 0.545 [0.527, 0.563] |
+| CNN beam | 0.827 [0.813, 0.840] | 0.821 [0.806, 0.834] |
+| CNN + adv. training, greedy | 0.298 [0.282, 0.315] | 0.324 [0.308, 0.341] |
+| CNN + adv. training, beam | 0.412 [0.394, 0.430] | 0.469 [0.451, 0.487] |
+
+The baseline CNN is no easier to evade on the grouped split. The
+adversarially trained CNN is somewhat easier to evade there under beam
+search (0.469 vs. 0.412, non-overlapping intervals), so the random split
+slightly flattered that defense.
 
 ### 4.11 Low base rates and low-FPR thresholds (PhreshPhish, seed 42)
 
@@ -678,13 +692,56 @@ rises to 99.2% (GBM), 98.4% (CNN), 73.8% (GBM + adv. training) and 38.5% (CNN
 ([`results/operating/phreshphish/OPERATING.md`](../results/operating/phreshphish/OPERATING.md)).
 Stricter thresholds trade recall for false positives but make evasion easier.
 
-<!-- ROUND2-PAPER -->
+On PhiUSIIL's domain-grouped split (seed 42,
+[`results/operating/phiusiil-grouped/OPERATING.md`](../results/operating/phiusiil-grouped/OPERATING.md))
+the base-rate problem largely disappears: precision at 90% recall is 100.0%
+for all four models down to a 0.05% base rate (AP 0.995–0.997). This is the
+format shortcut again, not robustness. The default threshold already gives
+test FPRs of 0.00–0.34%, so the thresholds chosen for 1% and 0.1% validation
+FPR are mostly below 0.5 and evasion does not rise (e.g. `cnn_raw` greedy
+0.644 [0.614, 0.673] at t = 0.5, 0.413 [0.382, 0.444] at the 1% target and
+0.497 [0.466, 0.528] at 0.1%).
 
-**TODO (round 2, runs still going):** §4.12 on mixed adversarial training
-and ensembles, with paired McNemar tests (answers the "no paired tests"
-limitation in §5) and the PhiUSIIL grouped-split operating point
-(`python -m phishadv.operating --dataset phiusiil-grouped`). Waits on the
-grouped PhiUSIIL defense runs for seeds 43 and 44.
+### 4.12 Mixed adversarial training and ensembles (seeds 42–44)
+
+Two more defenses: *mixed* AT (`*_raw_mix`), which adds owner-tier
+beam-search trajectories to each AT round, and score-averaging GBM+CNN
+ensembles of the baseline, AT and mixed-AT pairs. All models are retrained
+from scratch for this experiment (`python -m phishadv.defenses`), so baseline
+numbers differ slightly from §4.2–4.4. We report the share of the 1,000
+sampled phishing URLs per seed still caught after the attack (pooled over
+seeds, 95% Wilson intervals) and compare defenses with exact McNemar tests on
+the same URLs ([`results/defenses/DEFENSES.md`](../results/defenses/DEFENSES.md)).
+PhreshPhish:
+
+| Model | Clean FPR | Greedy | Held-out | Beam |
+|---|---|---|---|---|
+| `gbm_raw` | 0.031 | 0.137 [0.125, 0.150] | 0.461 [0.444, 0.479] | 0.036 [0.030, 0.043] |
+| `gbm_raw_at` | 0.039 | 0.582 [0.564, 0.600] | 0.556 [0.538, 0.574] | 0.253 [0.238, 0.269] |
+| `gbm_raw_mix` | 0.045 | 0.655 [0.637, 0.671] | 0.587 [0.569, 0.604] | 0.259 [0.244, 0.275] |
+| `cnn_raw` | 0.027 | 0.039 [0.033, 0.047] | 0.252 [0.236, 0.268] | 0.000 [0.000, 0.001] |
+| `cnn_raw_at` | 0.038 | 0.771 [0.756, 0.786] | 0.366 [0.349, 0.383] | 0.011 [0.008, 0.015] |
+| `cnn_raw_mix` | 0.035 | 0.768 [0.753, 0.783] | 0.298 [0.282, 0.315] | 0.006 [0.004, 0.009] |
+| ensemble | 0.021 | 0.049 [0.042, 0.058] | 0.354 [0.337, 0.372] | 0.003 [0.002, 0.006] |
+| ensemble, AT | 0.029 | 0.741 [0.725, 0.756] | 0.537 [0.519, 0.555] | 0.186 [0.172, 0.200] |
+| ensemble, mixed AT | 0.029 | 0.767 [0.751, 0.781] | 0.525 [0.507, 0.542] | 0.152 [0.140, 0.165] |
+
+* Mixed AT improves the GBM against greedy (0.655 vs. 0.582, p = 1.5e-33)
+  and held-out edits (0.587 vs. 0.556, p = 6.6e-11) but not against beam
+  search (0.259 vs. 0.253, p = 0.27), at a higher clean FPR (0.045 vs. 0.039).
+* For the CNN, mixed AT leaves greedy unchanged (p = 0.64) and is worse on
+  held-out edits (0.298 vs. 0.366, p = 1.7e-25) and beam (0.006 vs. 0.011,
+  p = 0.00027).
+* The AT ensemble is below the AT GBM under beam search (0.186 vs. 0.253,
+  p = 1e-36) and held-out edits (0.537 vs. 0.556, p = 0.0021), with a lower
+  clean FPR (0.029 vs. 0.039).
+* On PhiUSIIL (domain-grouped), held-out edit evasion is 0.0% for every model; mixed AT gives
+  small significant gains under beam search (GBM 0.607 vs. 0.584, CNN 0.578
+  vs. 0.529, ensemble 0.617 vs. 0.560; all p < 1e-8) at clean FPRs of
+  0.002–0.007.
+
+No defense we tried survives the beam search on PhreshPhish: the best still
+lets roughly three in four flagged URLs through.
 
 ## 5. Limitations and honest negatives
 
@@ -742,11 +799,13 @@ grouped PhiUSIIL defense runs for seeds 43 and 44.
   subdomain counts as its own registrable domain depends on the Public
   Suffix List's private section, which sets what the `owner` tier lets the
   attacker change.
-* **No paired significance tests in the round-1 tables.** The Wilson
-  intervals are per model and per attack, not paired comparisons on the same
-  attacked URLs. Where two intervals overlap (for example, GBM greedy
-  evasion on PhiUSIIL's random vs. domain-grouped split, 0.635 [0.618, 0.652]
-  vs. 0.617 [0.600, 0.635]), read the difference as unresolved.
+* **Paired tests only for the round-2 defenses.** §4.12 compares defenses
+  with exact McNemar tests on the same attacked URLs. The other tables'
+  Wilson intervals are per model and per attack, not paired comparisons.
+  Where two intervals overlap there (for example, GBM greedy evasion on
+  PhiUSIIL's random vs. domain-grouped split, 0.635 [0.618, 0.652] vs. 0.617
+  [0.600, 0.635], which are different URL samples and cannot be paired),
+  read the difference as unresolved.
 
 ## 6. Ethics
 

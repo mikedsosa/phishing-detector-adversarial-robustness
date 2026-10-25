@@ -71,6 +71,13 @@ for `cnn_raw`, 0.367 [0.350, 0.386] for `gbm_raw_at` and 0.229
 [`results/SEEDS.md`](results/SEEDS.md). The published models are the seed-42
 ones.
 
+Round 2 also tested mixed adversarial training (adds beam-search
+trajectories) and GBM+CNN ensembles; these models are not published. On
+PhreshPhish (seeds 42–44) none of them keeps more than 25.9% of phishing
+URLs caught under the beam-search attack, and mixed training raised the
+GBM's clean FPR to 4.5% (CNN 3.5%, ensemble 2.9%). See
+[`results/defenses/DEFENSES.md`](results/defenses/DEFENSES.md).
+
 ## Known limitations
 
 * **Out-of-distribution failure.** Scored on the PhiUSIIL test split, whose

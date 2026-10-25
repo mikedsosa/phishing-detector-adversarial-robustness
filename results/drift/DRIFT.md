@@ -57,3 +57,14 @@ Train on one dataset, score the other's test split. Mean [min-max] over seeds, t
 | PhreshPhish | PhiUSIIL | GBM + canon. + adv. training | 3 | 26.34% [26.23-26.48] | 77.00% [76.65-77.21] |
 | PhreshPhish | PhiUSIIL | Format rule (not https://www.<domain>) | 3 | 0.03% [0.01-0.04] | 98.99% [98.99-99.00] |
 | PhreshPhish | PhiUSIIL | Query rule (URL has a query string) | 3 | 0.00% [0.00-0.00] | 6.13% [5.98-6.23] |
+| PhiUSIIL (domain-grouped split) | PhreshPhish | GBM (baseline) | 3 | 100.00% [100.00-100.00] | 93.77% [93.75-93.79] |
+| PhiUSIIL (domain-grouped split) | PhreshPhish | GBM + canonicalization | 3 | 92.73% [92.72-92.74] | 91.53% [91.33-91.71] |
+| PhiUSIIL (domain-grouped split) | PhreshPhish | GBM, domain-only | 3 | 8.70% [7.92-9.54] | 65.74% [64.43-66.75] |
+| PhiUSIIL (domain-grouped split) | PhreshPhish | Char-CNN (baseline) | 3 | 99.99% [99.97-100.00] | 93.68% [93.50-93.81] |
+| PhiUSIIL (domain-grouped split) | PhreshPhish | Char-CNN + canonicalization | 3 | 92.25% [92.02-92.50] | 92.21% [90.97-93.14] |
+| PhiUSIIL (domain-grouped split) | PhreshPhish | Char-CNN, domain-only | 3 | 5.62% [3.19-7.39] | 74.16% [70.66-77.29] |
+| PhiUSIIL (domain-grouped split) | PhreshPhish | GBM + adv. training | 3 | 100.00% [100.00-100.00] | 94.35% [94.32-94.36] |
+| PhiUSIIL (domain-grouped split) | PhreshPhish | Char-CNN + adv. training | 3 | 100.00% [100.00-100.00] | 94.94% [94.58-95.25] |
+| PhiUSIIL (domain-grouped split) | PhreshPhish | GBM + canon. + adv. training | 3 | 92.75% [92.74-92.77] | 91.83% [91.70-92.00] |
+| PhiUSIIL (domain-grouped split) | PhreshPhish | Format rule (not https://www.<domain>) | 3 | 95.66% [95.66-95.66] | 93.16% [93.16-93.16] |
+| PhiUSIIL (domain-grouped split) | PhreshPhish | Query rule (URL has a query string) | 3 | 0.06% [0.06-0.06] | 23.96% [23.96-23.96] |
