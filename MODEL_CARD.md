@@ -80,6 +80,11 @@ ones.
   recovers to 91–93% in October and November. On December's 1,017 benign URLs
   the FPR rises to 8.4% (`gbm_raw`), 8.8% (`cnn_raw`) and 15.6%
   (`cnn_raw_at`). See [`results/drift/DRIFT.md`](results/drift/DRIFT.md).
+* **Low base rates.** At a 1% phishing base rate, precision at 90% recall is
+  22.5% (`gbm_raw`) to 52.1% (`cnn_raw_at`); at 0.05% it is 1.4–5.1%. At a
+  threshold tuned for 0.1% validation FPR, greedy evasion rises (e.g.
+  `cnn_raw` 98.4%, `cnn_raw_at` 38.5%). See
+  [`results/operating/phreshphish/OPERATING.md`](results/operating/phreshphish/OPERATING.md).
 * **Query-string shortcut.** The dataset authors stripped query strings from
   benign URLs for privacy. As a result only 0.018% of legitimate URLs have
   one, against 11.6% of phishing URLs, and the models can learn "has a query"

@@ -612,6 +612,40 @@ cheaper attackers, on PhreshPhish, seeds 42–44
   training) within 10 edits. This is a weak decision-based attack; a
   stronger one would do better.
 
+### 4.10 Domain leakage in PhiUSIIL's random split
+
+With the random split, 38.6% of phishing test URLs (38.6–38.7% across seeds
+42–44) share a registrable domain with a phishing training URL, against about
+2.3% of legitimate test URLs
+([`results/domain_leakage.csv`](../results/domain_leakage.csv)). (PhreshPhish's time split has some overlap too:
+17.4% of phishing and 58.1% of benign test URLs, seed 42; for benign URLs
+this is expected, since popular sites recur.) We added a domain-grouped
+70/10/20 split (`--config full-grouped`, scikit-learn `GroupShuffleSplit` on
+the registrable domain; zero overlap). For the GBM, seeds 42–44
+([`results/phiusiil-grouped-gbm-preview/SUMMARY.md`](../results/phiusiil-grouped-gbm-preview/SUMMARY.md)):
+
+| | Random split | Domain-grouped split |
+|---|---|---|
+| GBM clean F1 (FPR) | 0.9978 (0.0004) | 0.9977 (0.0005) |
+| GBM greedy | 0.635 [0.618, 0.652] | 0.617 [0.600, 0.635] |
+| GBM beam | 0.798 [0.783, 0.812] | 0.828 [0.814, 0.841] |
+| GBM + adv. training, greedy | 0.343 [0.326, 0.360] | 0.348 [0.331, 0.366] |
+| GBM + adv. training, beam | 0.412 [0.394, 0.430] | 0.414 [0.397, 0.432] |
+
+The leak barely moves the GBM's numbers; beam evasion is 3 points higher on
+the grouped split. The format shortcut (§4.1) dominates. <!-- ROUND2-PAPER-GROUPED-CNN -->
+
+### 4.11 Low base rates and low-FPR thresholds (PhreshPhish, seed 42)
+
+Reweighting phishing test URLs to 1% of traffic, precision at 90% recall is
+22.5% (GBM), 40.0% (CNN), 24.3% (GBM + adv. training) and 52.1% (CNN + adv.
+training); at 0.05% it is 1.4–5.1%. With thresholds chosen on validation data
+for at most 0.1% FPR (test FPR 0.12–0.15%, recall 70.3–75.5%), greedy evasion
+rises to 99.2% (GBM), 98.4% (CNN), 73.8% (GBM + adv. training) and 38.5% (CNN
++ adv. training), from 83.2%, 95.6%, 34.7% and 17.6% at t = 0.5
+([`results/operating/phreshphish/OPERATING.md`](../results/operating/phreshphish/OPERATING.md)).
+Stricter thresholds trade recall for false positives but make evasion easier.
+
 <!-- ROUND2-PAPER -->
 
 ## 5. Limitations and honest negatives

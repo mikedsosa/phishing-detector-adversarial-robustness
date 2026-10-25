@@ -126,7 +126,7 @@ Adversarial training raises the false-positive rate: for the CNN from 2.2% to
 
 PhiUSIIL's random split leaks domains: 38.6% of phishing test URLs (seed 42;
 38.6–38.7% across seeds) share a registrable domain with a phishing training
-URL, against about 2.3% of legitimate ones. Round 2 adds a 70/10/20 split
+URL, against about 2.3% of legitimate ones ([`results/domain_leakage.csv`](results/domain_leakage.csv)). Round 2 adds a 70/10/20 split
 grouped by registrable domain, so no domain appears in more than one split.
 For the GBM it changes little: clean scores, greedy and adversarially
 trained results stay within sampling error, and beam-search evasion rises by

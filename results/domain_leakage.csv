@@ -1,0 +1,11 @@
+dataset,split,seed,label,n_test,share_domain_seen_in_train_same_label
+phiusiil,random,42,phishing,20104,0.38549542379625945
+phiusiil,random,42,legitimate,26970,0.023618835743418613
+phiusiil,random,43,phishing,20104,0.3871368881814564
+phiusiil,random,43,legitimate,26970,0.022951427512050426
+phiusiil,random,44,phishing,20104,0.3862912853163549
+phiusiil,random,44,legitimate,26970,0.02339636633296255
+phiusiil,domain-grouped,42,phishing,19511,0.0
+phiusiil,domain-grouped,42,legitimate,27106,0.0
+phreshphish,time,42,phishing,76799,0.1736871573848618
+phreshphish,time,42,legitimate,91260,0.5813938198553583
