@@ -42,6 +42,9 @@ From [`results/phreshphish/clean_metrics.csv`](results/phreshphish/clean_metrics
 | `cnn_raw_at` | 0.9437 | 0.9562 | 0.9499 | 0.9904 | 0.0480 |
 
 A false-positive rate of 2–5% is far too high for blocking real traffic.
+Adversarial training raises it: `cnn_raw_at` flags 4.8% of legitimate URLs
+against 2.2% for `cnn_raw` on seed 42 (2.4–4.8% vs. 2.2–3.1% across seeds
+42–44), and `gbm_raw_at` 3.9% against 3.1%.
 
 ## Robustness (seed 42, 1,000 phishing test URLs)
 
@@ -71,6 +74,12 @@ ones.
   legitimate URLs are bare `https://www.<domain>` homepages, the PhreshPhish
   models' F1 falls to 0.57–0.76 and `gbm_raw` flags almost every legitimate
   homepage (FPR 0.9987; `results/phreshphish/cross_dataset.csv`).
+* **Drift over time.** Phishing recall on the September 2025 test URLs (the
+  first weeks after the training data ends) is 58.7% for `gbm_raw` and 85.0%
+  for `cnn_raw`, against 95.9% and 95.7% on same-period validation data. It
+  recovers to 91–93% in October and November. On December's 1,017 benign URLs
+  the FPR rises to 8.4% (`gbm_raw`), 8.8% (`cnn_raw`) and 15.6%
+  (`cnn_raw_at`). See [`results/drift/DRIFT.md`](results/drift/DRIFT.md).
 * **Query-string shortcut.** The dataset authors stripped query strings from
   benign URLs for privacy. As a result only 0.018% of legitimate URLs have
   one, against 11.6% of phishing URLs, and the models can learn "has a query"

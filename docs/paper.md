@@ -578,6 +578,42 @@ Clean F1, greedy evasion and detection under greedy attack, as GBM / CNN
   about a quarter of the GBM domain model's detections in one step (0.239
   PhiUSIIL, 0.235 PhreshPhish).
 
+### 4.8 Drift over time (PhreshPhish)
+
+PhreshPhish's split is chronological (training URLs 2024-07-02 to
+2025-09-08, test URLs 2025-09-08 to 2025-12-16), so the test set already
+measures temporal drift. Breaking it down by month with the seed-42 models
+([`results/drift/DRIFT.md`](../results/drift/DRIFT.md); 95% Wilson
+intervals):
+
+| Model | Validation (training period) | Sep 2025 | Oct 2025 | Nov 2025 | Dec 2025 FPR (benign only, n = 1,017) |
+|---|---|---|---|---|---|
+| GBM (baseline) | recall 95.9% [95.6, 96.1], FPR 2.7% | recall 58.7% [57.2, 60.1], FPR 2.8% | 91.4%, 3.1% | 92.5%, 3.1% | 8.4% [6.8, 10.2] |
+| Char-CNN (baseline) | 95.7% [95.4, 96.0], 1.9% | 85.0% [83.9, 86.1], 2.0% | 92.4%, 2.2% | 93.2%, 2.3% | 8.8% [7.3, 10.8] |
+| GBM + adv. training | 96.2%, 3.5% | 60.3%, 3.6% | 93.2%, 3.9% | 93.0%, 3.9% | 8.2% [6.6, 10.0] |
+| Char-CNN + adv. training | 97.5%, 4.2% | 89.2%, 4.5% | 95.9%, 4.7% | 96.3%, 5.1% | 15.6% [13.5, 18.0] |
+
+The September dip comes from only 4,279 phishing URLs, so it may reflect a
+few campaigns rather than a gradual trend; the December FPR rise uses only
+1,017 benign URLs. Both are drift the random validation split would not show.
+
+### 4.9 Query budgets and label-only access
+
+All attacks above see the model's score and get unlimited queries. Two
+cheaper attackers, on PhreshPhish, seeds 42–44
+([`results/SEEDS.md`](../results/SEEDS.md), `evasion_vs_queries.csv`):
+
+* **Query budget.** The greedy attack evades 17.0% (GBM) and 18.1% (CNN) of
+  flagged URLs within 10 score queries and 81.7% (per-seed 79.2–83.5%) and
+  90.8% (86.7–93.1%) within 50.
+* **Label-only.** Applying random valid edits and checking only the verdict
+  evades 27.0% [25.4, 28.7] (GBM), 25.9% [24.3, 27.6] (CNN), 11.8%
+  [10.6, 13.0] (GBM + adv. training) and 7.9% [6.9, 8.9] (CNN + adv.
+  training) within 10 edits. This is a weak decision-based attack; a
+  stronger one would do better.
+
+<!-- ROUND2-PAPER -->
+
 ## 5. Limitations and honest negatives
 
 * **Both benchmarks have collection artifacts.** Legitimate URLs in PhiUSIIL
