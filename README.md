@@ -4,6 +4,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)
 
+## What this shows
+This is a new, independent project using only public data. It builds on my adversarial machine learning research at BYU, which I wrote up as a [case study](https://mikedsosa.com/portfolio/adversarial-ml-phishing/). It trains two URL-only phishing detectors, then attacks them with the kind of cheap, realistic edits a phisher who controls their own domain can actually make, and measures what common defenses buy and cost. The threat model and limitations sit right next to the findings: URL-only detectors, dataset shortcuts the models can learn, and defenses tested only against my own attacks. The attacks rewrite strings offline, and no URL is ever resolved or visited.
+
 **How robust are URL-based phishing detectors to the cheap, realistic edits a phisher can actually make?**
 
 This research project trains two URL-only phishing detectors, a scikit-learn
